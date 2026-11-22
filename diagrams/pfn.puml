@@ -1,0 +1,21 @@
+@startuml
+!include theme.iuml
+left to right direction
+actor "Browser\nCodeMirror" as B
+package "pfn-play" {
+  [http.go\nPOST /execute] as H
+}
+package "pfn (Go package)" {
+  file "prelude.pfn" as PR
+  [Run\nmain.go] as RUN
+  [Scanner\nscanner.go] as SC
+  [Transpiler\ntp.go] as TP
+}
+rectangle "Python source\n(returned as text)" as PY
+B --> H : pfn code
+H --> RUN : pfn.Run
+PR --> RUN : prepended
+RUN --> SC : text
+SC --> TP : tokens
+TP --> PY
+@enduml

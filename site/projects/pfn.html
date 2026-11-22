@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pfn · Rodrigo Monteiro</title>
+<meta name="description" content="pfn, a small language that transpiles to Python, and pfn-play, its web playground.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">pfn</h1><p class="intro">A small language I made in 2021 while learning how parsers work. It looks a bit like Lisp, borrows from Haskell, Ruby and Clojure, and transpiles to Python. pfn-play puts it in the browser.</p></section>
+</div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Author</dd></div><div><dt>When</dt><dd>Jun – Aug 2021; playground fixes until May 2022</dd></div><div><dt>Stack</dt><dd>Go, Python as the target, CodeMirror</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/pfn">pfn</a> · <a href="https://github.com/TsukiGva2/pfn-play">pfn-play</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>You write functions with <code>.f(|x,y| -&gt; …)</code> and call them as <code>(f x y)</code>. A function can be defined several times with literal patterns in its arguments, like Haskell clauses, and <code>when … do … end</code> blocks handle conditions. pfn-play is a Go server with a CodeMirror editor: you type pfn, press Submit, and get back the Python. It used to run on Heroku; the screenshots below are from running it locally.</p><div class="figs"><figure><img src="../assets/img/projects/pfn-play-editor.webp" width="1200" height="560" alt="pfn-play in the browser: a dark code editor with a pfn program that defines iSqrt three times, and Submit, vim mode and prelude buttons below."><figcaption>pfn-play with the README's square-root example.</figcaption></figure><figure><img src="../assets/img/projects/pfn-play-output.webp" width="634" height="750" loading="lazy" alt="The Python that pfn-play returns: the runtime helpers, then pfn_iSqrt, pfn_iSqrt_1 and pfn_iSqrt_2, each raising UnmatchedError when its pattern does not match."><figcaption>What comes back. I ran it: 4 gives 0.5, 0 gives "undefined", −2 gives "no real sqrt".</figcaption></figure></div>
+</section>
+<section aria-labelledby="design-decisions"><h2 id="design-decisions">Design decisions</h2>
+<ul class="decisions"><li><strong>Prefix calls, after losing to precedence.</strong> I spent two weeks trying to parse <code>1 + 2 - 2 + 2 / 3 * 2</code>, gave up after a few stack overflows, tried <code>+(x,y)</code>, noticed it turned into Lisp once nested, and switched to Lisp-style calls.</li><li><strong>Transpile to Python.</strong> No interpreter to write: pfn emits Python source, and Python does the running. A <code>py {…}</code> block drops raw Python in when pfn can't express something.</li><li><strong>Pattern matching as a chain of functions.</strong> Each definition of <code>f</code> becomes its own Python function (<code>pfn_f</code>, <code>pfn_f_1</code>, …) that raises <code>UnmatchedError</code> if its pattern fails. A call tries them in order until one returns.</li><li><strong>A parser that tries everything.</strong> Each construct is a parser function. They are tried in turn, rewinding on failure, and the error reported is the one from the parser that got furthest.</li><li><strong>The standard library is written in pfn.</strong> <code>prelude.pfn</code> is prepended to every program unless you turn it off.</li></ul>
+</section>
+<section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
+<p>About 1,800 lines of Go. Here is a program going from the editor to Python:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/pfn.svg" loading="lazy" alt="Data flow: the browser posts pfn code to pfn-play's /execute handler, which calls pfn.Run; Run prepends prelude.pfn, the Scanner turns text into tokens, the Transpiler turns tokens into Python source, which is returned as text."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/pfn.puml</code>).</figcaption></figure><p class="gopher-credit">Gophers from the <a href="https://github.com/MariaLetta/free-gophers-pack">Free Gophers Pack</a> by Maria Letta (<a href="https://github.com/TsukiGva2/free-gophers-pack">fork</a>), licensed CC0. Go gopher designed by Renée French.</p><div class="part"><h3>pfn-play: the server<img class="gopher" src="../assets/img/gophers/gopher-48.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Serves the editor and hands the posted code to <code>pfn.Run</code>.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn-play/blob/master/http.go">http.go (pfn-play)</a></figcaption><pre><code>package main
+
+import (
+	&quot;net/http&quot;
+	&quot;os&quot;
+
+	&quot;github.com/TsukiGva2/pfn&quot;
+)
+
+func main() {
+	port := os.Getenv(&quot;PORT&quot;)
+	if port == &quot;&quot; {
+		port = &quot;8080&quot;
+	}
+
+	http.HandleFunc(&quot;/execute&quot;, runpfn)
+	http.Handle(&quot;/&quot;, http.FileServer(http.Dir(&quot;public&quot;)))
+	http.ListenAndServe(&quot;:&quot;+port, nil)
+}
+
+func runpfn(wr http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	noprelude := false
+
+	np, exists := query[&quot;noprelude&quot;]
+	if exists &amp;&amp; np[0] == &quot;true&quot; {
+		noprelude = true
+	}
+
+	res := pfn.Run(r.FormValue(&quot;code&quot;), false, noprelude).Output
+	wr.Write([]byte(res))
+}</code></pre></figure></div><div class="part"><h3>Run<img class="gopher" src="../assets/img/gophers/gopher-47.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Prepends the prelude, scans, transpiles.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/main.go#L8-L32">main.go</a></figcaption><pre><code>func Run(code string, p bool, noprelude bool, customErrs ...string) Transpiler {
+	cerrs = customErrs
+	if !noprelude {
+		cont, err := ioutil.ReadFile(&quot;prelude.pfn&quot;)
+
+		if err != nil {
+			panic(err)
+		}
+
+		code = string(cont) + &quot;\n\n&quot; + code
+	}
+
+	sc := Scanner{code, 0, 0, 0, false}
+	tokens := sc.scanTokens()
+	//for i := range tokens {
+	//  fmt.Printf(&quot;%#v\n&quot;, tokens[i])
+	//}
+	tp := Transpiler{0, tokens, &quot;&quot;}
+	tp.start()
+
+	if p {
+		fmt.Print(tp.Output)
+	}
+
+	return tp</code></pre></figure></div><div class="part"><h3>Scanner<img class="gopher" src="../assets/img/gophers/gopher-50.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>A hand-written scanner: one character at a time, peeking ahead for two-character tokens like <code>-&gt;</code> and <code>:=</code>.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/scanner.go#L93-L130">scanner.go</a></figcaption><pre><code>func (s *Scanner) scanTokens() []Token {
+	var tokens []Token
+	for !s.isAtEnd() {
+		s.start = s.current
+		tokens = append(tokens, s.scanToken())
+	}
+
+	tokens = append(tokens, Token{cEOF, &quot;&quot;, nil, s.line, s.current})
+	return tokens
+}
+
+func (s Scanner) isAtEnd() bool {
+	return s.current &gt;= len(s.text)
+}
+
+func (s *Scanner) scanToken() Token {
+begin:
+	var c byte
+	if !s.isAtEnd() {
+		c = s.advance()
+	} else {
+		return s.partialTok(cEOF)
+	}
+
+	switch c {
+	case &#x27;(&#x27;:
+		return s.partialTok(cLparen)
+	case &#x27;)&#x27;:
+		return s.partialTok(cRparen)
+	case &#x27;{&#x27;:
+		return s.getstr(&#x27;}&#x27;)
+	case &#x27;,&#x27;:
+		return s.partialTok(cComma)
+	case &#x27;.&#x27;:
+		return s.partialTok(cDot)
+	case &#x27;-&#x27;:
+		return s.partialTok(tern(s.match(&#x27;&gt;&#x27;), cArrow, tern(s.match(&#x27;=&#x27;), cMinusEq, cMinus)))
+	case &#x27;+&#x27;:</code></pre></figure></div><div class="part"><h3>Trying every parser<img class="gopher" src="../assets/img/gophers/gopher-45.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>The heart of the transpiler: try each parser function, rewind on failure, remember which one got furthest.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/tp.go#L1383-L1422">tp.go</a></figcaption><pre><code>func (tp *Transpiler) findMatchingParserFn(fns []parserFn) (string, error) {
+	/*
+		Return First Working One
+
+		returns the first matching
+		parsing function on the given
+		list
+	*/
+
+	old := tp.current
+
+	/*
+		couldn&#x27;t think of a better name, &#x27;max&#x27; is used for
+		storing the parser function that has taken the most steps,
+		it is used for setting &#x27;probableCause&#x27; later.
+	*/
+	var max uint
+	var probableCause string
+	var tokenAtErr string
+
+	for i := range fns {
+		res, err := fns[i]()
+
+		if err == nil {
+			return res, nil
+		}
+
+		steps := tp.current - old
+		if steps &gt;= max {
+			max = steps
+			probableCause = err.Error()
+			tokenAtErr = tp.ctoken().lexeme
+		}
+
+		tp.current = old
+	}
+
+	tp.err(&quot;findMatchingParserFn&quot;, &quot;no matching pfn for tokens &#x27;&quot;+tp.ctoken().lexeme+&quot;&#x27; through &#x27;&quot;+tokenAtErr+&quot;&#x27;\nprobably because of this error: &quot;+probableCause)
+	return &quot;&quot;, errors.New(&quot;no matching pfn&quot;)
+}</code></pre></figure></div><div class="part"><h3>Functions and patterns<img class="gopher" src="../assets/img/gophers/gopher-59.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>A repeated name gets a numbered suffix, and each literal argument becomes a check that raises <code>UnmatchedError</code>.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/tp.go#L299-L345">tp.go</a></figcaption><pre><code>	f, exists := fns[fname]
+	oldName := fname
+
+	if exists {
+		fname = fmt.Sprintf(&quot;%s_%d&quot;, fname, len(f))
+	}
+
+	code = fmt.Sprintf(&quot;%sdef pfn_%s(*args):\n&quot;, prefix, fname)
+
+	code += fmt.Sprintf(&quot;\tif len(args) &lt; %d:\n\t\traise ArgcountError(&#x27;too few arguments for function %s&#x27;)\n&quot;, len(args), fname)
+
+	for i := range args {
+		arg := args[i]
+
+		if arg.expr == &quot;_&quot; {
+			continue
+		}
+
+		if arg.atype == tNormal {
+			code += fmt.Sprintf(&quot;\t%s = args[%d]\n&quot;, arg.expr, i)
+			continue
+		}
+
+		if arg.atype == tTypeAssertN {
+			exp := arg.expr
+			argname := exp[:strings.Index(exp, &quot;|&quot;)]
+			texpr := exp[strings.Index(exp, &quot;|&quot;)+1:]
+
+			code += fmt.Sprintf(&quot;\tif type(%s) != type:\n\t\traise Exception(&#x27;type assertion expression must be a valid type&#x27;)\n&quot;, texpr)
+			code += fmt.Sprintf(&quot;\tif %s != type(args[%d]):\n\t\traise UnmatchedError(&#x27;unmatched&#x27;)\n&quot;, texpr, i)
+			code += fmt.Sprintf(&quot;\t%s = args[%d]\n&quot;, argname, i)
+			continue
+		}
+
+		if arg.atype == tTypeAssertC {
+			exp := arg.expr
+			cmp := exp[:strings.Index(exp, &quot;|&quot;)]
+			texpr := exp[strings.Index(exp, &quot;|&quot;)+1:]
+
+			code += fmt.Sprintf(&quot;\tif type(%s) != type:\n\t\traise Exception(&#x27;type assertion expression must be a valid type&#x27;)\n&quot;, texpr)
+			code += fmt.Sprintf(&quot;\tif %s != type(args[%d]):\n\t\traise UnmatchedError(&#x27;unmatched&#x27;)\n&quot;, texpr, i)
+			code += fmt.Sprintf(&quot;\tif %s != args[%d]:\n\t\traise UnmatchedError(&#x27;unmatched&#x27;)\n&quot;, cmp, i)
+			continue
+		}
+
+		code += fmt.Sprintf(&quot;\tif %s != args[%d]:\n\t\traise UnmatchedError(&#x27;unmatched&#x27;)\n&quot;, arg.expr, i)
+	}</code></pre></figure></div><div class="part"><h3>The runtime<img class="gopher" src="../assets/img/gophers/gopher-62.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Emitted at the top of every program: <code>__pfn_call</code> tries each version of a function until one doesn't raise.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/tp.go#L112-L124">tp.go</a></figcaption><pre><code>	pfncall := &quot;def __pfn_call(p, args):\n&quot;
+	pfncall += &quot;	result=None\n&quot;
+	pfncall += &quot;	broke=False\n&quot;
+	pfncall += &quot;	for f in p:\n&quot;
+	pfncall += &quot;		try:\n&quot;
+	pfncall += &quot;			result=eval(f+&#x27;(*&#x27;+str(args)+&#x27;)&#x27;)\n&quot;
+	pfncall += &quot;		except (UnmatchedError, ArgcountError):\n&quot;
+	pfncall += &quot;			continue\n&quot;
+	pfncall += &quot;		broke=True\n\n&quot;
+	pfncall += &quot;		break\n&quot;
+	pfncall += &quot;	if not broke:\n&quot;
+	pfncall += &quot;		raise Exception(&#x27;no matching function&#x27;)\n\n&quot;
+	pfncall += &quot;	return result\n&quot;</code></pre></figure></div><div class="part"><h3>The prelude</h3><p>Library functions written in pfn itself, with a little Python where needed.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/pfn/blob/main/prelude.pfn#L22-L36">prelude.pfn</a></figcaption><pre><code>
+.Assoc (|k, v|
+	when (!= (len k) (len v)) do
+		py{raise Exception(&quot;number of keys must match number of values&quot;)}
+	end
+
+	a:=(dict)
+
+	loop
+		a:val:=v:i
+	where i,val =&gt; (enumerate k)
+
+	-&gt; a
+)</code></pre></figure></div>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">13 Jun 2021</span><span>First commit: "it works!"</span></li><li><span class="when">14 Jun 2021</span><span>Basic pattern matching and <code>when</code> blocks.</span></li><li><span class="when">16 Jun 2021</span><span>Loops.</span></li><li><span class="when">19 Jun 2021</span><span>Classes, rewritten several times in early July.</span></li><li><span class="when">27 Jun 2021</span><span>pfn-play: the language in the browser.</span></li><li><span class="when">10 Jul 2021</span><span>A <code>match</code> construct.</span></li><li><span class="when">1 Aug 2021</span><span>Type assertions on function arguments; the last commit to pfn.</span></li><li><span class="when">May 2022</span><span>A last fix to the playground's example: <code>1/sqrt(0)</code> is undefined, not 0.</span></li></ol><p>The README promised it would be the last language I made.</p>
+</section>
+<section aria-labelledby="more-pictures"><h2 id="more-pictures">More pictures</h2>
+<div class="figs"><figure><img src="../assets/img/projects/pfn-assoc.webp" width="888" height="210" loading="lazy" alt="pfn code for an Assoc function, syntax-highlighted in yellow, red and green on black: a when check, a dict, and a loop over enumerate."><figcaption>The README's image: <code>Assoc</code> from the prelude, with pfn's Vim syntax file.</figcaption></figure></div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

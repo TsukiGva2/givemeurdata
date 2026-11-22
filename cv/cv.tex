@@ -1,9 +1,13 @@
 %
 % Based on https://github.com/BaseMax/developer-cv-template (Max Base)
+% Tailored for: iFood, Staff Backend Software Engineer (Ref. 100221)
 %
 \documentclass[a4paper,10pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\input{glyphtounicode}
+\pdfgentounicode=1
 \usepackage{geometry}
 \geometry{top=1cm, bottom=1cm, left=0.8cm, right=0.8cm}
 \usepackage{parskip}
@@ -14,11 +18,12 @@
 	linkcolor=black
 }
 \usepackage{enumitem}
+\usepackage{needspace}
 \setlist[itemize]{noitemsep, topsep=0pt}
 
 \pagestyle{empty}
 
-\newcommand{\sectiontitle}[1]{\vspace{6pt}\noindent\textbf{\large #1}\vspace{3pt}\hrule\vspace{6pt}}
+\newcommand{\sectiontitle}[1]{\needspace{5\baselineskip}\vspace{6pt}\noindent\textbf{\large #1}\vspace{3pt}\hrule\vspace{6pt}}
 
 \newenvironment{smallprojects}{
 	\begingroup
@@ -34,15 +39,15 @@
 	\begin{center}
 		{\LARGE \textbf{Rodrigo Monteiro}}\\
 		\vspace{2pt}
-		São Mateus, ES, Brazil \quad | \quad \href{mailto:rodrigo.monteiro.tech@gmail.com}{rodrigo.monteiro.tech@gmail.com} \quad | \quad
+		São Mateus, ES, Brazil \quad | \quad \href{mailto:rodrigo.monteiro.tech@gmail.com}{rodrigo.monteiro.tech@gmail.com} \quad | \quad \href{https://givemeurdata.uk}{givemeurdata.uk} \\
 		\href{https://github.com/TsukiGva2}{github.com/TsukiGva2} \quad | \quad
-		\href{https://www.linkedin.com/in/rodrigo-monteiro-0561992b7/}{LinkedIn} \\
+		\href{https://www.linkedin.com/in/rodrigo-monteiro-0561992b7/}{linkedin.com/in/rodrigo-monteiro-0561992b7} \\
 		\vspace{2pt}
 		\textit{Backend engineer: Go, distributed edge systems, PostgreSQL, Linux}
 	\end{center}
 
 	%=== PROFESSIONAL SUMMARY ===
-	Backend engineer who owned a production distributed system end to end. For two years I was the main engineer behind \textbf{MonoTempo}, the RFID race-timing platform behind live sporting events: RFID readers at the start and finish line, edge units in the field, message-driven services in \textbf{Go}, and the cloud API that publishes the rankings. I designed it offline-first because races happen where connectivity is unreliable, then replaced it with a simpler MQTT and cloud-processing design that ended incidents at events. I also built \textbf{PvAPI}, a Go marketplace backend with transactional checkout, row-level locking and a spec-driven AI-agent workflow. Today I work on data and operational intelligence for a university, writing SQL against a large academic database and using AI-assisted development daily. I am comfortable going from firmware to cloud, owning decisions and explaining their trade-offs.
+	Backend engineer who owned a production distributed system end to end. For two years I was the main engineer behind \textbf{MonoTempo}, the RFID race-timing platform behind live sporting events: RFID readers at the start and finish line, edge units in the field, message-driven services in \textbf{Go}, and the cloud API that publishes the rankings. I designed it offline-first because races happen where connectivity is unreliable, then replaced it with a simpler MQTT and cloud-processing design that ended incidents at events. I also built \textbf{PvAPI}, a Go marketplace backend with transactional checkout, row-level locking and a spec-driven AI-agent workflow. Today I work on data and operational intelligence for a university, writing SQL against a large academic database and using \mbox{AI-assisted} development daily. I am comfortable going from firmware to cloud, owning decisions and explaining their trade-offs.
 
 	%=== CORE SKILLS & EXPERTISE ===
 	\sectiontitle{Core Skills \& Expertise}
@@ -53,7 +58,7 @@
 		\item \textbf{Infrastructure}: Linux, Docker, Podman (Quadlets), systemd, nginx, shell automation, Ansible (basic)
 		\item \textbf{Other languages}: Python, C, C++ (CPython extensions), Lua (OpenResty/Lapis), PHP (Laravel, CodeIgniter)
 		\item \textbf{Embedded}: Arduino/AVR, serial protocols with checksums, RFID readers (Chafon, Impinj), nanoFORTH
-		\item \textbf{AI}: designed a spec-driven workflow for coding agents (specs as issues, test-gated guardrails, custom skills); daily AI-assisted development; deployed a local text-to-speech model on edge units
+		\item \textbf{AI}: designed a spec-driven workflow for coding agents (specs as issues, test-gated guardrails, custom skills); daily \mbox{AI-assisted} development; deployed a local text-to-speech model on edge units
 	\end{itemize}
 
 	%=== EXPERIENCE ===
@@ -63,6 +68,7 @@
 	\textit{Jun 2026 -- present}
 	\begin{itemize}
 		\item Part of the team that turns raw data from the university's academic platforms into information for management, faculty and students.
+		\item Built the student-data extraction API over the academic ERP (SEI) database: asynchronous CSV exports behind token auth, which replaced a web scraper as the data source for the team's enrollment analytics dashboard.
 		\item Write and optimize SQL queries on the academic system (SEI) to extract operational metrics, track enrollment, validate classes and check teaching schedules.
 		\item Build analytical reports that monitor use of the SEI and the virtual learning environment (AVA), supporting bug diagnosis, data consistency and content availability.
 		\item Investigate level 1 and 2 incidents through system logs and tables, finding the root cause of access and navigation problems with the support team.
@@ -95,8 +101,8 @@
 		\textbf{A7X} (Lua, OpenResty/Lapis, MySQL) \\
 		Race-results backend with 13 models, role-based access for organizers, judges and coaching groups, and reports. Built and deployed in three weeks.
 
-		\textbf{Self-modifying display firmware} (nanoFORTH, Arduino, Go) \\
-		Seven LCD screens driven by a single Forth word that rewrites its own bytecode at runtime, controlled from a Go host over serial, with every memory layout verified against hex dumps.
+		\textbf{UNIVC Analytics} (REST API, SQL, PHP) \\
+		Enrollment analytics for the university. I built the student-data extraction API on top of the ERP database: a client creates an export, polls its status and downloads the CSV when it is ready. It replaced a scraper that logged into the JSF/RichFaces portal and downloaded Excel reports; each collection now takes a few seconds, so the dashboard syncs every hour and skips writes when a fingerprint of the reports hasn't changed.
 	\end{smallprojects}
 
 	%=== LANGUAGES ===

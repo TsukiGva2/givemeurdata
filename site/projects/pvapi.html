@@ -28,12 +28,12 @@
 <ul class="decisions"><li><strong>SQL in the open, transactions in the model.</strong> Every lock and every <code>WHERE</code> is visible in review, and one function holds one invariant from <code>BEGIN</code> to <code>COMMIT</code>.</li><li><strong>Lock the row that owns the rule.</strong> The client row for rate limits, package rows for stock, the shop row for balance. Requests for the same client or shop queue up; unrelated ones don't.</li><li><strong>Freeze money at write time.</strong> Each checkout stores the shop's value, tax and commission, so later price changes never rewrite earnings. Money is <code>decimal</code>, never float.</li><li><strong>Checkout idempotency took three tries.</strong> A client-supplied key mixed up two jobs; a content hash had no notion of time, so buying the same thing a week later returned the old QR code; the current version locks the client row and answers a second checkout within 60 s with 429.</li></ul>
 </section>
 <section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
-<p>A conventional layered service. Here is one request, a partner checkout, going through each layer:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/pvapi.svg" loading="lazy" alt="Layered architecture: clients call Gin routes, which pass through middleware and authorization gates to controllers, models that own the transaction, plain SQL in the query package, and PostgreSQL."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/pvapi.puml</code>).</figcaption></figure><div class="part"><h3>Routes</h3><p>Route groups per role; the partner checkout group requires an API token.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/routes.go#L236-L241">routes.go</a></figcaption><pre><code>	checkouts := t.Group(&quot;/checkouts&quot;)
+<p>A conventional layered service. Here is one request, a partner checkout, going through each layer:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/pvapi.svg" loading="lazy" alt="Layered architecture: clients call Gin routes, which pass through middleware and authorization gates to controllers, models that own the transaction, plain SQL in the query package, and PostgreSQL."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/pvapi.puml</code>).</figcaption></figure><p class="gopher-credit">Gophers from the <a href="https://github.com/MariaLetta/free-gophers-pack">Free Gophers Pack</a> by Maria Letta (<a href="https://github.com/TsukiGva2/free-gophers-pack">fork</a>), licensed CC0. Go gopher designed by Renée French.</p><div class="part"><h3>Routes<img class="gopher" src="../assets/img/gophers/gopher-51.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Route groups per role; the partner checkout group requires an API token.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/routes.go#L236-L241">routes.go</a></figcaption><pre><code>	checkouts := t.Group(&quot;/checkouts&quot;)
 	checkouts.Use(apitokenmw.Require(pool))
 	{
 		checkouts.POST(&quot;/confirm&quot;, checkout.ConfirmHandler(pool))
 		checkouts.DELETE(&quot;/:unique_id&quot;, checkout.CancelHandler(pool))
-	}</code></pre></figure></div><div class="part"><h3>Middleware</h3><p>Partner tokens are <code>pv_</code> plus 64 hex characters, checked against a stored SHA-256 hash.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/middleware/apitoken/apitoken.go#L20-L48">middleware/apitoken/apitoken.go</a></figcaption><pre><code>func Require(pool *pgxpool.Pool) gin.HandlerFunc {
+	}</code></pre></figure></div><div class="part"><h3>Middleware<img class="gopher" src="../assets/img/gophers/gopher-44.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Partner tokens are <code>pv_</code> plus 64 hex characters, checked against a stored SHA-256 hash.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/middleware/apitoken/apitoken.go#L20-L48">middleware/apitoken/apitoken.go</a></figcaption><pre><code>func Require(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader(&quot;Authorization&quot;)
 		if auth == &quot;&quot; {
@@ -60,7 +60,7 @@
 				&quot;message&quot;: &quot;invalid token type&quot;,
 			})
 			return
-		}</code></pre></figure></div><div class="part"><h3>Gates</h3><p>Authorization is one gate per entity, picked by path prefix by a single Bouncer. A route with no gate is easy to spot.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/gate/shop.go#L11-L29">gate/shop.go</a></figcaption><pre><code>
+		}</code></pre></figure></div><div class="part"><h3>Gates<img class="gopher" src="../assets/img/gophers/gopher-61.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Authorization is one gate per entity, picked by path prefix by a single Bouncer. A route with no gate is easy to spot.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/gate/shop.go#L11-L29">gate/shop.go</a></figcaption><pre><code>
 func (s *ShopGate) Dispatch(
 	u User,
 	r Resource,
@@ -78,7 +78,7 @@ func (s *ShopGate) Dispatch(
 		if r.EndPoint(&quot;/contasbancarias&quot;) {
 			return s.BankAccounts(u, r)
 		}
-		if id == &quot;&quot; {</code></pre></figure></div><div class="part"><h3>Controllers</h3><p>Bind and validate the request, call the model, and turn domain errors into status codes, like 429 for a checkout too soon after the last one.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/controllers/checkout/checkout.go#L49-L91">controllers/checkout/checkout.go</a></figcaption><pre><code>func ConfirmHandler(
+		if id == &quot;&quot; {</code></pre></figure></div><div class="part"><h3>Controllers<img class="gopher" src="../assets/img/gophers/gopher-55.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>Bind and validate the request, call the model, and turn domain errors into status codes, like 429 for a checkout too soon after the last one.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/controllers/checkout/checkout.go#L49-L91">controllers/checkout/checkout.go</a></figcaption><pre><code>func ConfirmHandler(
 	pool *pgxpool.Pool,
 ) func(c *gin.Context) {
 	return func(c *gin.Context) {
@@ -120,7 +120,7 @@ func (s *ShopGate) Dispatch(
 				return
 			}
 
-			switch {</code></pre></figure></div><div class="part"><h3>Models</h3><p>The model opens the transaction and holds the invariant: lock the client row, then check the cooldown.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/models/checkoutmodel/checkout.go#L152-L186">models/checkoutmodel/checkout.go</a></figcaption><pre><code>
+			switch {</code></pre></figure></div><div class="part"><h3>Models<img class="gopher" src="../assets/img/gophers/gopher-42.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>The model opens the transaction and holds the invariant: lock the client row, then check the cooldown.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/models/checkoutmodel/checkout.go#L152-L186">models/checkoutmodel/checkout.go</a></figcaption><pre><code>
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return resp, fmt.Errorf(&quot;failed to begin transaction: %w&quot;, err)
@@ -154,7 +154,7 @@ func (s *ShopGate) Dispatch(
 
 	// Rate-limit check: if last checkout within 60 seconds, return 429
 	remaining, isBlocked, err := checkRateLimit(ctx, tx, clientID)
-	if err != nil {</code></pre></figure></div><div class="part"><h3>Queries</h3><p>SQL lives as plain strings, one file per entity, so every lock is visible in review.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/query/client.go#L38-L40">query/client.go</a></figcaption><pre><code>	LockClientRowQuery = `
+	if err != nil {</code></pre></figure></div><div class="part"><h3>Queries<img class="gopher" src="../assets/img/gophers/gopher-60.webp" width="72" height="72" alt="" aria-hidden="true" loading="lazy"></h3><p>SQL lives as plain strings, one file per entity, so every lock is visible in review.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/query/client.go#L38-L40">query/client.go</a></figcaption><pre><code>	LockClientRowQuery = `
 SELECT id FROM clients WHERE id = $1 FOR UPDATE
 `</code></pre></figure><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/query/checkout.go#L57-L63">query/checkout.go</a></figcaption><pre><code>	CheckRateLimitQuery = `
 SELECT EXTRACT(EPOCH FROM (NOW() - chk.processed_at))::bigint AS seconds_ago

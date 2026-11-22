@@ -33,9 +33,9 @@
     </div>
   </figure>
   <div class="side side-col">
-    <div class="side"><p class="label">About me</p><p>I like old-school programming and whiteboards.</p><a href="about.html">More about me →</a></div>
-    <div class="side"><p class="label">My work</p><p>Race-timing hardware, a marketplace API and some side projects.</p><a href="#projects">Browse projects →</a></div>
-    <div class="side"><p class="label">Find me</p><a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a></div>
+    <div class="side"><p class="label">About me</p><p>I like old-school programming, retrocomputing, microcontrollers and programming language design.</p><a href="about.html">More about me →</a></div>
+    <div class="side"><p class="label">My work</p><p>Race-timing software, APIs, AI tools and Automation</p><a href="#projects">Browse projects →</a></div>
+    <div class="side"><p class="label">GitHub</p><a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a></div>
   </div>
 </section>
 </div>
@@ -43,20 +43,36 @@
   <section class="stats-sec" aria-labelledby="about-title">
     <div>
       <p class="label">About me</p>
-      <h2 id="about-title">Working on race timing since 2024</h2>
+      <h2 id="about-title">Working as a developer since 2024</h2>
     </div>
     <div>
       <dl class="stats">
-        <div><dt>projects on this site</dt><dd>6</dd></div>
-        <div><dt>my age when I started programming</dt><dd>10</dd></div>
+        <div><dt>Projects on this site</dt><dd>7</dd></div>
+        <div><dt>Span</dt><dd>~3 Years</dd></div>
       </dl>
-      <p>From 2024 to early 2026 I wrote the software for MyTempo's RFID timing portals. They read runners' bibs, store everything offline and upload the times later. Now I work with data at a university and study Computer Engineering.</p>
+      <figure class="quote" data-quotes>
+        <blockquote><p>Talk is cheap. Show me the code.</p></blockquote>
+        <figcaption>Linus Torvalds, Linux kernel mailing list, 2000</figcaption>
+      </figure>
+      <script type="application/json" id="quotes">[
+        ["Talk is cheap. Show me the code.", "Linus Torvalds, Linux kernel mailing list, 2000"],
+        ["Beware of bugs in the above code; I have only proved it correct, not tried it.", "Donald Knuth, 1977"],
+        ["There are only two kinds of languages: the ones people complain about and the ones nobody uses.", "Bjarne Stroustrup"],
+        ["Nvidia, fuck you!", "Linus Torvalds, Aalto University, 2012"],
+        ["When in doubt, use brute force.", "Ken Thompson"],
+        ["A language that doesn't affect the way you think about programming is not worth knowing.", "Alan Perlis, Epigrams on Programming, 1982"]
+      ]</script>
       <p><a href="cv.html">Read the CV →</a> &nbsp; <a href="about.html">More about me →</a></p>
     </div>
   </section>
   <div class="worked">
-    <p class="label">Previously worked on</p>
+    <p class="label">Working at</p>
+    <img src="assets/img/projects/univc-logo.png" width="373" height="109" loading="lazy" alt="UNIVC, Centro Universitário Vale do Cricaré">
+  </div>
+  <div class="worked">
+    <p class="label">Previously built</p>
     <img src="assets/img/projects/mytempo-logo.png" width="320" height="106" loading="lazy" alt="MyTempo">
+    <img src="assets/img/projects/suainscricao-logo.png" width="217" height="52" loading="lazy" alt="Sua Inscrição">
     <img src="assets/img/projects/pvauto-logo.png" width="320" height="180" loading="lazy" alt="PvAuto">
   </div>
 
@@ -126,11 +142,21 @@ dpll(Phi, _, _, _) :-
         <ul class="tags"><li>LLVM IR</li><li>raylib</li></ul>
       </div>
     </li>
+    <li class="card window">
+      <div class="window-bar"><span>pfn.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/pfn-play-editor.webp" width="1200" height="560" loading="lazy" style="object-position:0% 50%" alt="The pfn-play editor with a pfn program in a dark code box.">
+      <div class="window-body">
+        <p class="meta">Jun – Aug 2021</p>
+        <h3><a href="projects/pfn.html">pfn</a></h3>
+        <p>A small Lisp-ish language that transpiles to Python, with a playground in the browser.</p>
+        <ul class="tags"><li>Go</li><li>Python</li></ul>
+      </div>
+    </li>
   </ul>
 
   <section aria-labelledby="tl-title" class="home-tl">
     <h2 id="tl-title">Timeline</h2>
-    <ol class="timeline"><li><span class="when">2021 – 2024</span><span>Technical high school, IT support (CEEMTI Prof. Fernando Duarte Rabelo).</span></li><li><span class="when">Aug 2024</span><span>Side project: <a href="projects/raylib-llvm-ir.html">raylib in LLVM IR</a>.</span></li><li><span class="when">2024 – 2026</span><span>Software Engineer, Backend &amp; IoT at MyTempo: <a href="projects/monotempo.html">MonoTempo</a>, <a href="projects/aa2-forth.html">the Forth screen</a>, <a href="projects/pvapi.html">PvAPI</a>.</span></li><li><span class="when">Nov 2025</span><span>Side project: <a href="projects/sat.html">SAT solver</a> in Prolog.</span></li><li><span class="when">Jun 2026</span><span>Systems Operator at Centro Universitário Vale do Cricaré. Side project: <a href="projects/ai-metrics.html">AI Metrics</a>.</span></li><li><span class="when">Jul 2026</span><span>Started a Bachelor's in Computer Engineering. LiFT Scholarship from the Linux Foundation; preparing for the CKA.</span></li></ol>
+    <ol class="timeline"><li><span class="when">2021 – 2024</span><span>Technical high school, IT support (CEEMTI Prof. Fernando Duarte Rabelo).</span></li><li><span class="when">Jun 2021</span><span>Side project: <a href="projects/pfn.html">pfn</a>, a language that transpiles to Python.</span></li><li><span class="when">Aug 2024</span><span>Side project: <a href="projects/raylib-llvm-ir.html">raylib in LLVM IR</a>.</span></li><li><span class="when">2024 – 2026</span><span>Software Engineer, Backend &amp; IoT at MyTempo: <a href="projects/monotempo.html">MonoTempo</a>, <a href="projects/aa2-forth.html">the Forth screen</a>, <a href="projects/pvapi.html">PvAPI</a>.</span></li><li><span class="when">Nov 2025</span><span>Side project: <a href="projects/sat.html">SAT solver</a> in Prolog.</span></li><li><span class="when">Jun 2026</span><span>Systems Operator at Centro Universitário Vale do Cricaré. Side project: <a href="projects/ai-metrics.html">AI Metrics</a>.</span></li><li><span class="when">Jul 2026</span><span>Started a Bachelor's in Computer Engineering. LiFT Scholarship from the Linux Foundation; preparing for the CKA.</span></li></ol>
   </section>
 </main>
 <footer class="site-footer">

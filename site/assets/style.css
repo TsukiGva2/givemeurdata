@@ -138,7 +138,10 @@ mark { background: var(--peach); color: inherit; padding: 0 .15em; }
 .stats div { display: flex; align-items: center; gap: 10px; }
 .stats dt { order: 2; font: 15px/1.3 var(--mono); max-width: 12ch; }
 .stats dd { margin: 0; font: 700 3rem/1 var(--sans); letter-spacing: -.02em; }
-.worked { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 48px; padding-block: 28px; }
+.worked { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 48px; padding-block: 20px; }
+.worked + .worked { border-top: 1px solid var(--ink); }
+.worked .label { min-width: 11em; }
+.worked + h2 { margin-top: 24px; }
 .worked .label { margin: 0 auto 0 0; }
 .worked img { height: 44px; width: auto; }
 
@@ -242,3 +245,16 @@ figure.diagram { margin: 24px 0 8px; }
 .part h3 { font-size: 1.2rem; margin-bottom: .3em; }
 .part p { margin: 0 0 10px; }
 .part figure.code { margin: 0 0 12px; }
+
+/* Rotating quote on the home page (site.js) */
+.quote { margin: 0 0 16px; padding-left: 14px; border-left: 3px solid var(--ink); min-height: 6.2em; transition: opacity .3s; }
+.quote.fading { opacity: 0; }
+.quote blockquote { margin: 0; }
+.quote blockquote p { margin: 0 0 6px; font-size: 1.15rem; font-style: italic; }
+.quote figcaption { font: 14px var(--mono); margin: 0; }
+
+/* Gophers on Go code parts */
+.part h3:has(.gopher) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gopher { flex: none; width: 72px; height: 72px; margin: -12px 0; }
+@media (max-width: 600px) { .gopher { width: 56px; height: 56px; margin: -8px 0; } }
+.gopher-credit { margin: 0 0 8px; font-size: .8rem; }
