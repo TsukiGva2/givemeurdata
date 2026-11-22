@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Forth screen · Rodrigo Monteiro</title>
+<meta name="description" content="For a few months in 2025 the portal&#x27;s 20×4 LCD ran Forth on the Arduino. In its second version, one word redrew the screen and the other words rewrote its bytes.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">The Forth screen</h1><p class="intro">For a few months in 2025 the portal's 20×4 LCD ran Forth on the Arduino. In its second version, one word redrew the screen and the other words rewrote its bytes.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Author</dd></div><div><dt>When</dt><dd>Jan–Feb 2025; replaced by C++ in Mar–Apr 2025</dd></div><div><dt>Stack</dt><dd>nanoFORTH (patched VM), Arduino C++, Go</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/MonoTempo#archives">MonoTempo archives</a> · <a href="https://github.com/MyTempoESP/AA2">AA2 repository</a> · <a href="https://github.com/chochain/nanoFORTH">nanoFORTH</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>The Arduino ran <a href="https://github.com/chochain/nanoFORTH">nanoFORTH</a> (© 2021 chochain, MIT) and the PC talked to it over serial. In the second version, <code>Dis</code> is compiled with holes in it: 16 bytes of <code>NOP</code> for data and two code buffers of call slots. A timer runs <code>Dis</code> over and over. The screen words <code>S-1</code> … <code>S-7</code> never draw anything; they patch <code>Dis</code>.</p><ul class="decisions"><li><strong>Data is stored as code.</strong> nanoFORTH has no data segment inside a word, so values are written as instructions that push them: <code>BF</code> (LIT) and a 16-bit value, plus a magnitude byte for counts like 10K.</li><li><strong>Calls are patched in.</strong> <code>program-calls!</code> writes <code>C000 | address</code> into the slots, pointing at the drawing word each screen needs.</li><li><strong>The fixed parts stay fixed.</strong> The device name, the connectivity footer and the final draw are compiled once and never touched.</li></ul>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<p>The word itself, with the memory layout I kept in its comments:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L74-L124">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>: Dis			( -- ; Screen buffer )
+ 
+	\ Memory layout:
+
+	\               080: 3820       :
+
+	\         REL   ADDR
+        \       DATA+00 082: bbbbbbbb   DATA Row 1
+        \       DATA+04 086: bbbbbbbb   DATA Row 2
+        \       DATA+08 08A: bbbbbbbb   DATA Row 3
+        \       DATA+0C 08E: bbbbbbbb   DATA Row 4
+
+        \               092:   00       First label ( Portal myXXX )
+        \               093: c005
+        \               095: c079
+        \               097: c01d
+        \               099: c00d
+        \       
+        \       COD1+00 09B: bcbb       Code-1 - Call slot 1
+        \       COD1+02 09D: bbbb       Code-1 - Call slot 2
+        \       COD1+04 09F: c00d       Code-1 - Forward (END)
+        \       
+        \       COD2+00 0A1: bcbb       Code-2 - Call slot 1
+        \       COD2+02 0A3: bbbb       Code-2 - Call slot 2
+        \       COD2+04 0A5: c00d       Code-2 - Forward (END)
+        \
+        \               0A7:   03       Last label ( Comunicando WEB )
+        \               0A8: c005
+        \               0AA: bb00
+        \               0AC: c025
+        \               0AE: c00d
+        
+	\		0B0: 00b4       Draw()
+        \       	0B2:   80       ;
+         
+
+	#_4 #_4 #_4 #_4		( COMPILE TIME: data-end-addr ; 16 byte data buffer ) 
+
+	0       Label		( label-id ; Main label, shows device name )
+	VERSION Number		( device-version )
+	        Forward
+
+	#4      Forward		( COMPILE TIME: tagged-addr )
+	#4      Forward		( COMPILE TIME: tagged-addr tagged-addr-2 )
+
+	3       Label NOP	( label-id ; Main label #2, shows device connectivity )
+	0       Value		( value-id )
+	        Forward
+
+	0 API			( 0 ; C-Api call #0: Draw screen )
+;</code></pre></figure><p>Writing a call instruction into a slot:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L178-L221">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>: prepare-call		( word-addr target-addr -- ; this function is specific to the [encode-]call! functions )
+	&gt;R			( word-addr        target-addr ; puts target-addr in a pokeball )
+	$C000 OR		( word-addr        call-opcode ; creates a call instruction, C000 | Address )
+	R&gt;			( call-instruction             ; goes like &quot;target-addr, i choose you!&quot; )
+;
+
+: encode-call!  	( word-addr target-addr -- ; useful in code modifying words, encode a literal call instruction )
+	prepare-call		( word-addr        target-addr ; )
+	16-bit-encode!		( call-instruction target-addr ; encodes the created call instruction as a value to target-addr )
+;
+
+: call! 		( word-addr target-addr -- ; writes a call instruction in target-addr )
+	prepare-call		( word-addr        target-addr ; )
+	!			( call-instruction target-addr ; writes the created call instruction, modifying target-addr )
+;
+
+: call-idx!		( word-addr idx code-addr -- ; writes a call instruction to aligned offset )
+	&gt;R			( word-addr idx align code-addr ; storing code-addr )
+	2 R&gt;			( word-addr idx align           ; retrieving code-addr, to reorder )
+	calc-align		( word-addr idx align code-addr ; 2-byte call )
+	call!			( word-addr indexed-addr )
+;
+
+\ ======================
+
+\ Screen function addresses
+
+&#x27; Label          VALUE addr-Label
+&#x27; Forward        VALUE addr-Forward
+&#x27; BigNum         VALUE addr-BigNum
+&#x27; Number         VALUE addr-Number
+&#x27; Value          VALUE addr-Value
+&#x27; Ip             VALUE addr-Ip
+&#x27; Ms             VALUE addr-Ms
+&#x27; helper-Antenna VALUE addr-Antenna  
+
+\ Screen functions
+
+( ADDR IDX N-CODE call-idx! )
+: program-calls!	( addr-W1 addr-W2 n-CODE -- ; programs the passed words into the specified CODE section )
+	DUP &gt;R &gt;R		( addr-W1 addr-W2 n-CODE -- addr-W1 addr-W2 ; puts n-CODE in the return stack for 2 uses )
+	1      R&gt; call-idx!	( addr-W1 addr-W2 ; programs W2 to n-CODE index 1 )
+	0   R&gt;    call-idx!	( addr-W1         ; programs W1 to n-CODE index 0 )
+;</code></pre></figure><p>A memory dump read back from the device after <code>3 10 3 10 S-1</code>. Row <code>080</code> holds the patched data, rows <code>090</code>–<code>0A0</code> the calls:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L300-L304">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>	\ DMP should look something like this ( let m2 = 3, m2 = 10, m1 = 3, and m1 = 10 )
+	\	15:40:40.516 -&gt; 080: 3820bf00 0a0301bb bbbbbf00 0a0302bb  8 ?____;;;?____;
+	\ 	15:40:40.516 -&gt; 090: bbbb00c0 05c079c0 1dc00dc0 05c015c0  ;;_@_@y@_@_@_@_@
+	\ 	15:40:40.516 -&gt; 0a0: 0dc005c0 15c00d03 c005bb00 c025c00d  _@_@_@__@_;_@%@_
+	\	15:40:40.516 -&gt; 0b0: 00b480</code></pre></figure>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">Jan 2025</span><span><strong>AA2-retro.</strong> The PC drives a nanoFORTH REPL: every frame is a short Forth phrase that builds the screen, and every button poll is a round trip through the interpreter.</span></li><li><span class="when">Feb 2025</span><span><strong>AA2-main.</strong> The screen logic moves onto the device as the self-modifying <code>Dis</code>. A Vim script shortens names to fit nanoFORTH's 3-character limit, and the VM gets two new words, <code>NOP</code> and <code>TAG</code>.</span></li><li><span class="when">24 Feb 2025</span><span><strong>AA2-final.</strong> Go sends one line per update, like <code>3 10 3 10 S-1</code>; the Arduino handles button navigation itself, and modal screens freeze <code>Dis</code> by patching <code>EXIT</code> over its first byte.</span></li><li><span class="when">Mar–Apr 2025</span><span>The Arduino is rewritten in plain C++, and the link becomes checksummed data frames. That is the version in production until Feb 2026.</span></li></ol>
+</section>
+<section aria-labelledby="pictures"><h2 id="pictures">Pictures</h2>
+<div class="figs"><figure><img src="../assets/img/projects/monotempo-inside.webp" width="720" height="1000" loading="lazy" alt="Inside a 50x unit: LCD and buttons on the lid, Arduino Mega, mini PC, RFID reader and power supply on wooden shelves."><figcaption>The Arduino Mega (lit red) and the LCD on the lid.</figcaption></figure><figure><img src="../assets/img/projects/monotempo-lcd.webp" width="700" height="491" loading="lazy" alt="LCD showing PORTAL my701, Regist.: 2116, Atletas: 2, START: Reset tela."><figcaption>The same screen after the C++ rewrite.</figcaption></figure></div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

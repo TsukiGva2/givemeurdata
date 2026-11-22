@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>raylib in LLVM IR · Rodrigo Monteiro</title>
+<meta name="description" content="A bouncing square written by hand in LLVM IR, linked against raylib. Started after watching a Tsoding stream.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">raylib in LLVM IR</h1><p class="intro">A bouncing square written by hand in LLVM IR, linked against raylib. Started after watching a <a href="https://www.youtube.com/watch?v=rzXEsactdT4">Tsoding stream</a>.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Author, learning in public</dd></div><div><dt>When</dt><dd>Aug 2024</dd></div><div><dt>Stack</dt><dd>LLVM IR, clang, raylib 5.0</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/raylib-llvm-ir">Repository</a> · <a href="https://www.youtube.com/watch?v=rzXEsactdT4">The Tsoding Daily stream</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>LLVM IR is meant to be written by compilers, not people. These are my notes from writing it by hand: <code>hello.ll</code> calls printf, <code>loop.ll</code> is a for loop as basic blocks, and <code>game.ll</code> opens an 800×600 window and bounces a green square. Clang compiles the <code>.ll</code> file directly and links raylib statically.</p><div class="figs"><figure><img src="../assets/img/projects/raylib-window.webp" width="804" height="626" alt="Window titled Hello, from LLVM with a green square near the right edge on a dark background."><figcaption>The running game.</figcaption></figure><figure><img src="../assets/img/projects/raylib-game-ll.webp" width="521" height="317" loading="lazy" alt="Editor showing game.ll: the main function allocating x, y, dx and dy and branching to the game loop."><figcaption>game.ll in the editor, with vim-llvm highlighting.</figcaption></figure></div>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<p>A for loop, as basic blocks:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/loop.ll#L18-L26">loop.ll</a></figcaption><pre><code>  %4 = load i32, i32* %2
+
+  ; %5 &lt;= int_cmp: %4 &lt; 10
+  ; slt = SIGNED less than
+  %5 = icmp slt i32 %4, 10
+
+  ; %5 has type i1 &lt;- int 1 bit
+  ; branch to 6 if %5 else 11
+  br i1 %5, label %6, label %11</code></pre></figure><p>Bouncing off a wall: flip the velocity by subtracting it from zero.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L40-L47">game.ll</a></figcaption><pre><code>update_dp:
+  %ldp = load i32, i32* %dp
+
+  ; clever
+  %neg_dp = sub nuw i32 0, %ldp
+  store i32 %neg_dp, i32* %dp
+
+  ret void</code></pre></figure>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">7 Aug 2024</span><span>Repository created.</span></li><li><span class="when">8 Aug 2024</span><span>The notes, the three .ll files and screenshots.</span></li></ol><p>Thanks to Tsoding for the stream, to <a href="https://github.com/raysan5/raylib">raylib</a> for the API, and to <a href="https://github.com/rhysd/vim-llvm">vim-llvm</a> for the highlighting.</p>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

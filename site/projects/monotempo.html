@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonoTempo · Rodrigo Monteiro</title>
+<meta name="description" content="Software for the MyTempo 50x RFID timing portals: boxes at the start and finish line of a race that read the chip on every bib, keep every read offline and upload the times later.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">MonoTempo</h1><p class="intro">Software for the MyTempo 50x RFID timing portals: boxes at the start and finish line of a race that read the chip on every bib, keep every read offline and upload the times later.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Main engineer, from the reader driver to the upload services</dd></div><div><dt>When</dt><dd>Jul 2024 – Feb 2026, in the field</dd></div><div><dt>Stack</dt><dd>Go, Python, C++, Arduino, RabbitMQ, SQLite, Docker, systemd, Arch Linux</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/MonoTempo">Repository and README</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>Each unit is a small Arch Linux PC wired to an RFID reader (Chafon or Impinj), an Arduino Mega with a 20×4 LCD and two buttons, and a 12 V battery. An offline half runs for the whole event without internet; an online half runs on demand to sync with the MyTempo API.</p><div class="figs"><figure><img src="../assets/img/projects/monotempo-portals.webp" width="800" height="1111" alt="Two MyTempo portals in the workshop, a tower unit and a box unit, next to a crate of RFID timing chips."><figcaption>Two portals in the workshop, next to a crate of timing chips.</figcaption></figure><figure><img src="../assets/img/projects/monotempo-inside.webp" width="720" height="1000" loading="lazy" alt="Inside a 50x unit: LCD and buttons on the lid, Arduino Mega, mini PC, RFID reader and power supply on wooden shelves."><figcaption>Inside a unit: LCD and buttons on the lid, Arduino Mega, mini PC, reader and power supply.</figcaption></figure></div>
+</section>
+<section aria-labelledby="design-decisions"><h2 id="design-decisions">Design decisions</h2>
+<ul class="decisions"><li><strong>Offline first.</strong> Races happen where the signal is bad, so reading and storing never depend on the network. Uploading is a separate step you can retry, from the screen or every 5 minutes.</li><li><strong>A broker between the reader and everything else.</strong> The reader only publishes to RabbitMQ. Storage and the screen each get their own queue, so a slow LCD never blocks writes.</li><li><strong>Store everything, decide later.</strong> No filtering at read time. Start and finish times are worked out in SQL at upload, once the track windows from the API are known.</li><li><strong>Many small SQLite files.</strong> SQLite allows one writer per file, so reads are sharded by bib number: bib 1234 goes to <code>N123.db</code>, each file with its own writer goroutine.</li><li><strong>Named pipes as the control plane.</strong> Containers ask the host for things by writing a word into a FIFO. No sockets, no polling.</li><li><strong>Crash and restart.</strong> Services exit on errors they can't recover from and Docker restarts them; the Chafon SDK only reconnects reliably after a full restart anyway.</li></ul>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<p>Envio picks the SQLite file for each read and grows the set of files as higher bib numbers show up.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/Offline/Envio/dbman/db.go#L233-L258">Offline/Envio/dbman/db.go</a></figcaption><pre><code>func (m *MADB) Insert(c athlete.Atleta) (err error) {
+
+	if c.Numero &gt; m.maxValue {
+
+		err = m.Grow(((c.Numero - m.maxValue) / m.groupSize) + 1)
+
+		if err != nil {
+
+			return
+		}
+	}
+
+	if c.Numero == m.maxValue {
+
+		err = m.Grow(1)
+
+		if err != nil {
+
+			return
+		}
+	}
+
+	err = m.databases[c.Numero/m.groupSize].Insert(c)
+
+	return
+}</code></pre></figure>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">Jul–Oct 2024</span><span>Container layout, the reader service, the C++ extension for the Chafon SDK, Receba, and a MySQL/PHP storage backend.</span></li><li><span class="when">Jan–Feb 2025</span><span>The screen runs Forth on the Arduino, in three versions. <a href="aa2-forth.html">The Forth screen →</a></span></li><li><span class="when">Mar 2025</span><span>MySQL replaced by sharded SQLite, which took a server off a battery-powered box. Reenvio uploads times.</span></li><li><span class="when">Mar–Apr 2025</span><span>Provost resets Wi-Fi and 4G; the Arduino is rewritten in C++ with on-screen actions.</span></li><li><span class="when">Dec 2025</span><span>Chip validation at kit pickup; configurable API URL.</span></li><li><span class="when">Feb 2026</span><span>Unified backup and upload, 5-minute auto-upload, antenna signal bars.</span></li></ol><p>After that I replaced this design with a simpler one: raw reads streamed over MQTT and processed in the cloud. Events ran without incidents from then on.</p>
+</section>
+<section aria-labelledby="more-pictures"><h2 id="more-pictures">More pictures</h2>
+<div class="figs"><figure><img src="../assets/img/projects/monotempo-dashboard.webp" width="1600" height="815" loading="lazy" alt="MyTempo results dashboard listing reads from portals RFIDMY501 and RFIDMY503."><figcaption>Reads from two portals in the MyTempo dashboard after an event (names redacted).</figcaption></figure><figure><img src="../assets/img/projects/monotempo-lcd.webp" width="700" height="491" loading="lazy" alt="LCD showing PORTAL my701, Regist.: 2116, Atletas: 2, START: Reset tela."><figcaption>The Info screen of the later C++ version.</figcaption></figure><figure><img src="../assets/img/projects/monotempo-chafon-tower.webp" width="320" height="690" loading="lazy" alt="Tower portal with the Chafon reader panel mounted above the LCD and buttons."><figcaption>The Chafon reader on a tower portal.</figcaption></figure></div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

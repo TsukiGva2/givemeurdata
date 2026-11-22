@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Metrics · Rodrigo Monteiro</title>
+<meta name="description" content="A small dashboard for the pi coding agent: after a session the agent writes down where it lost time, and Node-RED adds it up.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">AI Metrics</h1><p class="intro">A small dashboard for the pi coding agent: after a session the agent writes down where it lost time, and Node-RED adds it up.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Author</dd></div><div><dt>When</dt><dd>Jun 2026</dd></div><div><dt>Stack</dt><dd>Node-RED, Dashboard 2, JSONata, a pi-agent skill and TypeScript extension</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/AI-Metrics">Repository</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>The <code>/feedback</code> skill has the agent review its own session, sort the friction into three kinds (context fragmentation, brittle state, missing guardrails) and append rows to <code>.pi/MAP.csv</code>. Node-RED watches the file, splits the session's tokens and cost by effort, and shows a table, an input/output token gauge and effort per module.</p><div class="figs"><figure><img src="../assets/img/projects/ai-metrics-dashboard.webp" width="1600" height="726" alt="Node-RED dashboard with a table of friction rows, a gauge reading 9.08 input/output ratio, and a bar chart of effort per scope."><figcaption>The dashboard, with sample rows.</figcaption></figure></div>
+</section>
+<section aria-labelledby="design-decisions"><h2 id="design-decisions">Design decisions</h2>
+<ul class="decisions"><li><strong>A CSV file as the database.</strong> The agent only appends rows; Node-RED is a file watcher, a CSV parser and a few JSONata reductions.</li><li><strong>Output the machine can read.</strong> The skill allows only raw rows with 12 fixed columns, effort that sums to exactly 100, and scope as a module name, never a path.</li><li><strong>Numbers from tools, not from the model.</strong> Token counts come from an extension, and the timestamp is read out of the session's UUIDv7.</li></ul>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<p>The columns the agent has to write:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/agents/skills/feedback/SKILL.md#L70">agents/skills/feedback/SKILL.md</a></figcaption><pre><code>session_id | friction_category | scope | effort_pct | diagnosis | tokens_in | tokens_out | tokens_total | cost_total | model_provider | model_id | timestamp</code></pre></figure><p>The gauge: the average input/output ratio over all rows, as a JSONata reduce.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/flows.json#L392">flows.json</a></figcaption><pre><code>$A + ($number(payload.tokens_in) / $number(payload.tokens_out))</code></pre></figure>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">5 Jun 2026</span><span>Project created.</span></li><li><span class="when">6 Jun 2026</span><span>Bare-bones metrics and the input/output gauge.</span></li><li><span class="when">7 Jun 2026</span><span>Effort per scope chart; the MAP.csv skill and extension.</span></li></ol>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

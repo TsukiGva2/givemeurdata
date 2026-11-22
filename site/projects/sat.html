@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAT solver · Rodrigo Monteiro</title>
+<meta name="description" content="A small DPLL SAT solver in Prolog, with a DIMACS reader so it can run the SATLIB benchmarks.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">SAT solver</h1><p class="intro">A small DPLL SAT solver in Prolog, with a DIMACS reader so it can run the SATLIB benchmarks.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Author</dd></div><div><dt>When</dt><dd>Nov 2025 – Feb 2026</dd></div><div><dt>Stack</dt><dd>SWI-Prolog, DCGs</dd></div><div><dt>Links</dt><dd><a href="https://github.com/TsukiGva2/SAT">Repository</a> · <a href="https://swish.swi-prolog.org/p/sat_solver.pl">Try it online (SWISH)</a> · <a href="https://swish.swi-prolog.org/p/sat_solver%20notebook.swinb">Notebook</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p><code>sat.pl</code> takes a formula written with <code>|</code>, <code>&amp;</code>, <code>-&gt;</code> and <code>~</code>, turns it into CNF and solves it. <code>sat_dimacs.pl</code> reads CNF files in DIMACS format instead, the format SATLIB uses.</p>
+</section>
+<section aria-labelledby="how-the-solver-works"><h2 id="how-the-solver-works">How the solver works</h2>
+<ul class="decisions"><li><strong>Unit clauses first.</strong> If a clause has a single literal, that variable is forced. The cut commits to it.</li><li><strong>Then pure literals.</strong> A variable that only appears with one sign gets that value.</li><li><strong>Then a decision.</strong> The first unassigned variable, true first; Prolog backtracks into false if that branch hits an empty clause.</li><li><strong>Simplify as you go.</strong> Assigning a value drops the clauses it satisfies and removes the literals it makes false.</li></ul>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L24-L50">sat_dimacs.pl</a></figcaption><pre><code>% SAT
+% -SAT is the set of attributions to the vars
+dpll([], SAT, SAT, _) :- !.
+
+% UNSAT
+dpll(Phi, _, _, _) :-
+    member([], Phi), !,
+    fail.
+
+dpll(Phi, Test, SAT, Symbols) :-
+	member(Sym, Symbols),
+    unit(Phi, Sym, T), !,
+    assign(Phi, Sym, T, Assigned),
+    select(Sym, Symbols, Chopped),
+    dpll(Assigned, [T|Test], SAT, Chopped).
+
+dpll(Phi, Test, SAT, Symbols) :-
+    member(Sym, Symbols),
+    pure_literal(Phi, Sym, T), !,
+    assign(Phi, Sym, T, Assigned),
+    select(Sym, Symbols, Chopped),
+    dpll(Assigned, [T|Test], SAT, Chopped).
+
+dpll(Phi, Test, SAT, [Sym|Symbols]) :-
+    !,
+    assign(Phi, Sym, T, Assigned),
+    dpll(Assigned, [T|Test], SAT, Symbols).</code></pre></figure>
+</section>
+<section aria-labelledby="benchmark"><h2 id="benchmark">Benchmark</h2>
+<p>One run over SATLIB's uf20-91 set: 1000 random 3-SAT instances, each with 20 variables and 91 clauses, all satisfiable. The solver found a model for all 1000.</p><div class="table-wrap"><table><tbody><tr><th scope="row">Instances</th><td>1000 (uf20-91)</td></tr><tr><th scope="row">Inferences</th><td>213,752,366</td></tr><tr><th scope="row">CPU time</th><td>21.882 s</td></tr><tr><th scope="row">Wall time</th><td>21.881 s</td></tr><tr><th scope="row">Speed</th><td>9,768,366 LIPS</td></tr></tbody></table></div><p>Inferences are SWI-Prolog's count of predicate calls; LIPS is inferences per second. So the whole set took about 22 seconds on one core. The README notes a single 50-variable instance takes roughly 79 million inferences, so harder sets are out of reach. <a href="https://github.com/TsukiGva2/SAT/blob/main/benchmarks/uf20-91.out">Full output</a>.</p>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<ol class="timeline"><li><span class="when">15 Nov 2025</span><span>Formula parser and a first solver.</span></li><li><span class="when">16 Nov 2025</span><span>Rewritten as a bare-bones DPLL.</span></li><li><span class="when">17 Nov 2025</span><span>Unit propagation, then pure literal elimination; the SWISH notebook.</span></li><li><span class="when">18 Nov 2025</span><span>DIMACS input, the uf20-91 benchmark run, and one solution instead of all of them.</span></li><li><span class="when">4 Feb 2026</span><span>Tests run in parallel.</span></li></ol>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

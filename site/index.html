@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rodrigo Monteiro</title>
+<meta name="description" content="Rodrigo Monteiro: backend and embedded code, mostly Go and Linux, sometimes Forth.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="index.html" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="index.html#projects"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap hero-mix" aria-labelledby="hero-title">
+  <div>
+    <hr class="rule">
+    <h1 id="hero-title">Hi, I'm <span style="white-space:nowrap">Rodrigo<span class="cursor" aria-hidden="true"></span></span></h1>
+    <p class="intro">I write backend and embedded code. Mostly Go and Linux, sometimes Forth.</p>
+    <a class="btn" href="#projects">See the projects ↓</a>
+  </div>
+  <figure class="window" style="margin:0">
+    <div class="window-bar"><span>photo.webp</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+    <div class="flip">
+      <img class="flip-front" src="assets/img/me/hero-front.webp" width="720" height="1280" alt="Rodrigo, in glasses, headphones and a green t-shirt, sitting next to his desk with code on the monitor.">
+      <img class="flip-back" src="assets/img/me/hero-back.webp" width="720" height="1280" alt="Rodrigo's desk: a monitor showing Lua code, a red-lit keyboard and his foot up on the desk.">
+    </div>
+  </figure>
+  <div class="side side-col">
+    <div class="side"><p class="label">About me</p><p>I like old-school programming and whiteboards.</p><a href="about.html">More about me →</a></div>
+    <div class="side"><p class="label">My work</p><p>Race-timing hardware, a marketplace API and some side projects.</p><a href="#projects">Browse projects →</a></div>
+    <div class="side"><p class="label">Find me</p><a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a></div>
+  </div>
+</section>
+</div>
+<main id="main" class="wrap">
+  <section class="stats-sec" aria-labelledby="about-title">
+    <div>
+      <p class="label">About me</p>
+      <h2 id="about-title">Working on race timing since 2024</h2>
+    </div>
+    <div>
+      <dl class="stats">
+        <div><dt>projects on this site</dt><dd>6</dd></div>
+        <div><dt>my age when I started programming</dt><dd>10</dd></div>
+      </dl>
+      <p>From 2024 to early 2026 I wrote the software for MyTempo's RFID timing portals. They read runners' bibs, store everything offline and upload the times later. Now I work with data at a university and study Computer Engineering.</p>
+      <p><a href="cv.html">Read the CV →</a> &nbsp; <a href="about.html">More about me →</a></p>
+    </div>
+  </section>
+  <div class="worked">
+    <p class="label">Previously worked on</p>
+    <img src="assets/img/projects/mytempo-logo.png" width="320" height="106" loading="lazy" alt="MyTempo">
+    <img src="assets/img/projects/pvauto-logo.png" width="320" height="180" loading="lazy" alt="PvAuto">
+  </div>
+
+  <h2 id="projects">Projects</h2>
+  <ul class="cards">
+    <li class="card window">
+      <div class="window-bar"><span>monotempo.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/monotempo-portals.webp" width="800" height="1111" loading="lazy" style="object-position:50% 12%" alt="Two MyTempo portals in the workshop next to a crate of timing chips.">
+      <div class="window-body">
+        <p class="meta">Jul 2024 – Feb 2026</p>
+        <h3><a href="projects/monotempo.html">MonoTempo</a></h3>
+        <p>Software for MyTempo's RFID timing portals. Stores every read offline, uploads later.</p>
+        <ul class="tags"><li>Go</li><li>Python</li><li>RabbitMQ</li><li>SQLite</li></ul>
+      </div>
+    </li>
+    <li class="card window">
+      <div class="window-bar"><span>pvapi.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/pvapi-storefront.webp" width="1280" height="800" loading="lazy" style="object-position:50% 0%" alt="PvAuto storefront listing products.">
+      <div class="window-body">
+        <p class="meta">Mar – Jun 2026</p>
+        <h3><a href="projects/pvapi.html">PvAPI</a></h3>
+        <p>Go backend for a consignment marketplace: checkout, stock, earnings and withdrawals.</p>
+        <ul class="tags"><li>Go</li><li>PostgreSQL</li><li>Gin</li></ul>
+      </div>
+    </li>
+    <li class="card window">
+      <div class="window-bar"><span>aa2-forth.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/monotempo-lcd.webp" width="700" height="491" loading="lazy" style="object-position:50% 50%" alt="The portal LCD showing reads and athlete counts.">
+      <div class="window-body">
+        <p class="meta">Jan – Feb 2025</p>
+        <h3><a href="projects/aa2-forth.html">The Forth screen</a></h3>
+        <p>The portal's LCD ran Forth. One word drew the screen; the others rewrote its bytes.</p>
+        <ul class="tags"><li>Forth</li><li>Arduino</li><li>Go</li></ul>
+      </div>
+    </li>
+    <li class="card window">
+      <div class="window-bar"><span>sat.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <pre class="card-code" aria-hidden="true">dpll([], SAT, SAT, _) :- !.
+
+dpll(Phi, _, _, _) :-
+    member([], Phi), !,
+    fail.</pre>
+      <div class="window-body">
+        <p class="meta">Nov 2025</p>
+        <h3><a href="projects/sat.html">SAT solver</a></h3>
+        <p>DPLL in Prolog. Solves all 1000 uf20-91 instances in about 22 seconds.</p>
+        <ul class="tags"><li>Prolog</li></ul>
+      </div>
+    </li>
+    <li class="card window">
+      <div class="window-bar"><span>ai-metrics.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/ai-metrics-dashboard.webp" width="1600" height="726" loading="lazy" style="object-position:0% 50%" alt="Dashboard with a table, a gauge and a bar chart.">
+      <div class="window-body">
+        <p class="meta">Jun 2026</p>
+        <h3><a href="projects/ai-metrics.html">AI Metrics</a></h3>
+        <p>A Node-RED dashboard of where a coding agent loses time.</p>
+        <ul class="tags"><li>Node-RED</li><li>JSONata</li></ul>
+      </div>
+    </li>
+    <li class="card window">
+      <div class="window-bar"><span>raylib-llvm-ir.md</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <img src="assets/img/projects/raylib-window.webp" width="804" height="626" loading="lazy" style="object-position:100% 70%" alt="A green square in a dark window titled Hello, from LLVM.">
+      <div class="window-body">
+        <p class="meta">Aug 2024</p>
+        <h3><a href="projects/raylib-llvm-ir.html">raylib in LLVM IR</a></h3>
+        <p>A bouncing square written by hand in LLVM IR.</p>
+        <ul class="tags"><li>LLVM IR</li><li>raylib</li></ul>
+      </div>
+    </li>
+  </ul>
+
+  <section aria-labelledby="tl-title" class="home-tl">
+    <h2 id="tl-title">Timeline</h2>
+    <ol class="timeline"><li><span class="when">2021 – 2024</span><span>Technical high school, IT support (CEEMTI Prof. Fernando Duarte Rabelo).</span></li><li><span class="when">Aug 2024</span><span>Side project: <a href="projects/raylib-llvm-ir.html">raylib in LLVM IR</a>.</span></li><li><span class="when">2024 – 2026</span><span>Software Engineer, Backend &amp; IoT at MyTempo: <a href="projects/monotempo.html">MonoTempo</a>, <a href="projects/aa2-forth.html">the Forth screen</a>, <a href="projects/pvapi.html">PvAPI</a>.</span></li><li><span class="when">Nov 2025</span><span>Side project: <a href="projects/sat.html">SAT solver</a> in Prolog.</span></li><li><span class="when">Jun 2026</span><span>Systems Operator at Centro Universitário Vale do Cricaré. Side project: <a href="projects/ai-metrics.html">AI Metrics</a>.</span></li><li><span class="when">Jul 2026</span><span>Started a Bachelor's in Computer Engineering. LiFT Scholarship from the Linux Foundation; preparing for the CKA.</span></li></ol>
+  </section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+<script src="assets/site.js" defer></script>
+</body>
+</html>

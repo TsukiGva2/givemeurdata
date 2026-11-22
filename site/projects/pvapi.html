@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PvAPI · Rodrigo Monteiro</title>
+<meta name="description" content="The Go backend of PvAuto, a consignment marketplace: shops send products to pickup points, clients buy online and collect with a QR code.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="../index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="../index.html#projects" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="../cv.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="../about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="../assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+<section class="wrap proj-head" aria-labelledby="t"><p class="label"><a href="../index.html#projects">Projects</a></p><h1 id="t">PvAPI</h1><p class="intro">The Go backend of PvAuto, a consignment marketplace: shops send products to pickup points, clients buy online and collect with a QR code.</p></section></div>
+<main id="main" class="wrap page">
+<dl class="facts"><div><dt>Role</dt><dd>Backend author and the agent workflow around it; storefront frontend by Gabriel and Kerlon</dd></div><div><dt>When</dt><dd>Mar – Jun 2026</dd></div><div><dt>Stack</dt><dd>Go, Gin, pgx/v5, PostgreSQL, gin-jwt, shopspring/decimal</dd></div><div><dt>Links</dt><dd><a href="https://github.com/MyTempoESP/PvAPI">Repository and README</a></dd></div></dl>
+<section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
+<p>A rewrite of an earlier Laravel backend. It covers the catalogue, consignments, checkout, stock reservation, per-shop earnings and withdrawals with admin approval. Requests go through Gin middleware, a controller, a model that owns the transaction, and plain SQL strings run through a pgx pool. No ORM.</p><div class="figs"><figure><img src="../assets/img/projects/pvapi-storefront.webp" width="1280" height="800" alt="PvAuto storefront listing products with prices."><figcaption>The storefront (frontend by Gabriel and Kerlon, seeded test data).</figcaption></figure><figure><img src="../assets/img/projects/pvapi-architecture.webp" width="1276" height="1187" loading="lazy" alt="Component diagram: Gin, middleware, Bouncer and gates, controllers, models, query package, PostgreSQL."><figcaption>The layers of the service.</figcaption></figure></div>
+</section>
+<section aria-labelledby="design-decisions"><h2 id="design-decisions">Design decisions</h2>
+<ul class="decisions"><li><strong>SQL in the open, transactions in the model.</strong> Every lock and every <code>WHERE</code> is visible in review, and one function holds one invariant from <code>BEGIN</code> to <code>COMMIT</code>.</li><li><strong>Lock the row that owns the rule.</strong> The client row for rate limits, package rows for stock, the shop row for balance. Requests for the same client or shop queue up; unrelated ones don't.</li><li><strong>Freeze money at write time.</strong> Each checkout stores the shop's value, tax and commission, so later price changes never rewrite earnings. Money is <code>decimal</code>, never float.</li><li><strong>Checkout idempotency took three tries.</strong> A client-supplied key mixed up two jobs; a content hash had no notion of time, so buying the same thing a week later returned the old QR code; the current version locks the client row and answers a second checkout within 60 s with 429.</li></ul>
+</section>
+<section aria-labelledby="code"><h2 id="code">Code</h2>
+<p>The third version of checkout deduplication. The client row is locked first, then the last checkout time decides:</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/query/client.go#L38-L40">query/client.go</a></figcaption><pre><code>	LockClientRowQuery = `
+SELECT id FROM clients WHERE id = $1 FOR UPDATE
+`</code></pre></figure><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/query/checkout.go#L57-L63">query/checkout.go</a></figcaption><pre><code>	CheckRateLimitQuery = `
+SELECT EXTRACT(EPOCH FROM (NOW() - chk.processed_at))::bigint AS seconds_ago
+FROM checkouts chk
+WHERE chk.client_id = $1
+ORDER BY chk.processed_at DESC
+LIMIT 1
+`</code></pre></figure><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/PvAPI/blob/wip/models/checkoutmodel/checkout.go#L245-L268">models/checkoutmodel/checkout.go</a></figcaption><pre><code>// checkRateLimit queries the most recent checkout for this client and
+// returns the remaining seconds and whether the request is blocked.
+func checkRateLimit(
+	ctx context.Context,
+	tx pgx.Tx,
+	clientID int,
+) (remaining int, isBlocked bool, err error) {
+	var secondsAgo *int64
+	err = tx.QueryRow(ctx, query.CheckRateLimitQuery, clientID).Scan(&amp;secondsAgo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// No previous checkout — not blocked
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf(&quot;failed to check rate limit: %w&quot;, err)
+	}
+
+	if secondsAgo == nil || *secondsAgo &gt;= int64(RateLimitWindowSeconds) {
+		return 0, false, nil
+	}
+
+	remaining = RateLimitWindowSeconds - int(*secondsAgo)
+	return remaining, true, nil
+}</code></pre></figure>
+</section>
+<section aria-labelledby="history"><h2 id="history">History</h2>
+<p>Numbers from the README, per month of 2026:</p><div class="table-wrap"><table><thead><tr><th scope="col">Month</th><th scope="col">Commits</th><th scope="col">Migrations (total)</th><th scope="col">HTTP test suites (total)</th></tr></thead><tbody><tr><td>Mar</td><td>109</td><td>7</td><td>0</td></tr><tr><td>Apr</td><td>94</td><td>9</td><td>1</td></tr><tr><td>May</td><td>215</td><td>31</td><td>17</td></tr><tr><td>Jun</td><td>71</td><td>53</td><td>19</td></tr></tbody></table></div><p>From late May I ran it with coding agents: 64 written specs, guardrails in <code>AGENTS.md</code>, and skills for tests and diagrams. I wrote the specs and the guardrails; the agents implemented them under tests. The 19 test suites run black-box HTTP requests against a real PostgreSQL.</p>
+</section>
+<section aria-labelledby="more-pictures"><h2 id="more-pictures">More pictures</h2>
+<div class="figs"><figure><img src="../assets/img/projects/pvapi-checkout-sequence.webp" width="1034" height="1428" loading="lazy" alt="Sequence diagram of the checkout transaction: lock client, check rate limit, lock packages, reserve stock, freeze shop values, commit."><figcaption>The checkout transaction.</figcaption></figure><figure><img src="../assets/img/projects/pvapi-rate-limit.webp" width="431" height="710" loading="lazy" alt="Activity diagram of the 60-second per-client checkout cooldown."><figcaption>The per-client cooldown.</figcaption></figure><figure><img src="../assets/img/projects/pvapi-saques.webp" width="1280" height="800" loading="lazy" alt="Shop finance tab with balance and withdrawal requests."><figcaption>Shop finance: frozen tax and commission, balance, withdrawals.</figcaption></figure><figure><img src="../assets/img/projects/pvapi-checkout-qr.webp" width="1280" height="800" loading="lazy" alt="Example partner client showing one pickup QR code per reserved package after checkout."><figcaption>Checkout through the partner API, one QR code per package.</figcaption></figure></div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>

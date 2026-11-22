@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CV · Rodrigo Monteiro</title>
+<meta name="description" content="CV of Rodrigo Monteiro, backend engineer.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="band-dark">
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">give me your data!</a>
+    <nav aria-label="Main"><ul class="nav"><li><a href="index.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v1h1v1h1v1h1v1H0V3h1V2h1V1h1zM1 5h6v3H5V6H3v2H1z"/></svg>Home</a></li><li><a href="index.html#projects"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 1h3v1h5v6H0z"/></svg>Projects</a></li><li><a href="cv.html" aria-current="page"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 0h4v2h2v6H1z"/></svg>CV</a></li><li><a href="about.html"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M3 0h2v3H3zM1 4h6v4H1z"/></svg>About</a></li></ul></nav>
+    <a class="btn" href="assets/cv.pdf" download>Download CV (PDF)</a>
+  </div>
+</header>
+</div>
+<main id="main" class="wrap page cv">
+  <p><a class="btn" href="assets/cv.pdf" download>Download CV (PDF)</a></p>
+  <header class="cv-head">
+    <h1>Rodrigo Monteiro</h1>
+    <p>São Mateus, ES, Brazil · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a> · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="https://www.linkedin.com/in/rodrigo-monteiro-0561992b7/">LinkedIn</a></p>
+    <p><em>Backend engineer: Go, distributed edge systems, PostgreSQL, Linux</em></p>
+  </header>
+  <p>Backend engineer who owned a production distributed system end to end. For two years I was the main engineer behind <strong>MonoTempo</strong>, the RFID race-timing platform behind live sporting events: RFID readers at the start and finish line, edge units in the field, message-driven services in <strong>Go</strong>, and the cloud API that publishes the rankings. I designed it offline-first because races happen where connectivity is unreliable, then replaced it with a simpler MQTT and cloud-processing design that ended incidents at events. I also built <strong>PvAPI</strong>, a Go marketplace backend with transactional checkout, row-level locking and a spec-driven AI-agent workflow. Today I work on data and operational intelligence for a university, writing SQL against a large academic database and using AI-assisted development daily. I am comfortable going from firmware to cloud, owning decisions and explaining their trade-offs.</p>
+
+  <h2>Core skills</h2>
+  <ul><li><strong>Go</strong>: concurrent services (goroutines, channels), Gin, pgx, message consumers and producers, CLI tools</li><li><strong>Distributed &amp; edge systems</strong>: offline-first and store-and-forward design, RabbitMQ, MQTT, idempotent re-sending, crash-and-restart supervision</li><li><strong>Data</strong>: PostgreSQL, MySQL, SQLite (sharded for write throughput), complex SQL for analytics and data-quality checks</li><li><strong>Infrastructure</strong>: Linux, Docker, Podman (Quadlets), systemd, nginx, shell automation, Ansible (basic)</li><li><strong>Other languages</strong>: Python, C, C++ (CPython extensions), Lua (OpenResty/Lapis), PHP (Laravel, CodeIgniter)</li><li><strong>Embedded</strong>: Arduino/AVR, serial protocols with checksums, RFID readers (Chafon, Impinj), nanoFORTH</li><li><strong>AI</strong>: designed a spec-driven workflow for coding agents (specs as issues, test-gated guardrails, custom skills); daily AI-assisted development; deployed a local text-to-speech model on edge units</li></ul>
+
+  <h2>Experience</h2>
+  <h3>Systems Operator, Centro Universitário Vale do Cricaré (UNIVC), Hub do Cricaré</h3>
+  <p class="meta">Jun 2026 – present · São Mateus, ES (on-site)</p>
+  <ul><li>Part of the team that turns raw data from the university's academic platforms into information for management, faculty and students.</li><li>Write and optimize SQL queries on the academic system (SEI) to extract operational metrics, track enrollment, validate classes and check teaching schedules.</li><li>Build analytical reports that monitor use of the SEI and the virtual learning environment (AVA), supporting bug diagnosis, data consistency and content availability.</li><li>Investigate level 1 and 2 incidents through system logs and tables, finding the root cause of access and navigation problems with the support team.</li><li>Map recurring failures and inconsistent records with SQL, enabling preventive fixes in the database that reduce ticket volume.</li></ul>
+  <h3>Software Engineer, Backend &amp; IoT, MyTempo (RFID race timing)</h3>
+  <p class="meta">2024 – 2026 · São Mateus, ES</p>
+  <ul><li>Main engineer of <strong>MonoTempo</strong>, the edge platform of the company's race-timing service (596 of 605 commits): RFID readers, field units, Go services and the integration with the cloud API.</li><li>Designed an <strong>offline-first, store-and-forward architecture</strong>: the reader publishes every tag to <strong>RabbitMQ</strong>, Go consumers persist reads across <strong>sharded SQLite files</strong> to avoid the single-writer bottleneck, and separate services sync event data and upload results when the network returns.</li><li>Replaced the first Python/Flask monolith with small services (MyReader, Envio, Receba, Reenvio, Validate) and moved storage from MySQL to SQLite for reliability in the field.</li><li>Rewrote the platform over one weekend to stream raw reads over <strong>MQTT</strong> and process them asynchronously in the cloud, with a parser and race logic on the server. Events ran without incidents from then on.</li><li>Wrote a C++ driver for the Chafon RFID module with Python bindings through the CPython C API.</li><li>Built the field unit's control panel: a Go daemon and Arduino firmware with a checksummed serial protocol, signal and battery monitoring, confirmations for destructive actions and power-down sleep.</li><li>Ran production services (APIs, legacy systems, internal tools) on a VPS with rootless Podman Quadlets behind nginx, and wrote the install, update and supervision scripts for the field units.</li><li>Built <strong>PvAPI</strong>, the Go backend of the company's PvAuto marketplace, replacing an earlier Laravel version: transactional checkout with row-level locking, per-shop earnings and withdrawals, partner API tokens and 19 HTTP test suites.</li><li>Was the technical reference for the platform: onboarded the engineer who took over the services, setting up access and servers and walking him through the code.</li></ul>
+
+  <h2>Featured projects</h2>
+  <h3><a href="projects/monotempo.html">MonoTempo</a> <small>Go, Python, C++, RabbitMQ, SQLite, Docker</small></h3>
+  <p>Edge platform for RFID race timing, documented with architecture, design decisions and their trade-offs: offline first, a broker between reader and consumers, store everything and decide later, named pipes as the host control plane, and crash-and-restart instead of recovery logic.</p>
+  <h3><a href="projects/pvapi.html">PvAPI</a> <small>Go, Gin, pgx, PostgreSQL</small></h3>
+  <p>Backend for a consignment marketplace, rewritten from Laravel to Go (489 commits, Mar–Jun 2026). Checkout runs in one transaction with row-level locks on the client, package and shop rows; money uses <code>decimal</code> and per-shop values are frozen at write time. Checkout idempotency went through three documented designs, from a client-supplied key to a content hash to a per-client rate limit after a production incident. Partner API with SHA-256-hashed tokens, per-entity authorization gates, 53 migrations and 19 black-box HTTP test suites against a real PostgreSQL. From May 2026 I ran it with coding agents: 64 written specs, guardrails in <code>AGENTS.md</code>, and custom skills for tests and diagrams.</p>
+  <h3>A7X <small>Lua, OpenResty/Lapis, MySQL</small></h3>
+  <p>Race-results backend with 13 models, role-based access for organizers, judges and coaching groups, and reports. Built and deployed in three weeks.</p>
+  <h3><a href="projects/aa2-forth.html">Self-modifying display firmware</a> <small>nanoFORTH, Arduino, Go</small></h3>
+  <p>Seven LCD screens driven by a single Forth word that rewrites its own bytecode at runtime, controlled from a Go host over serial, with every memory layout verified against hex dumps.</p>
+
+  <h2>Languages</h2>
+  <p>Portuguese (native) · English (advanced)</p>
+
+  <h2>Education</h2>
+  <h3>Bachelor's in Computer Engineering (in progress)</h3><p class="meta">Centro Universitário Vale do Cricaré · Jul 2026 – Jul 2030 (expected)</p>
+  <h3>Technical High School, IT Support</h3><p class="meta">CEEMTI Prof. Fernando Duarte Rabelo · Jan 2021 – Jan 2024</p>
+  <h3>LiFT Scholarship recipient</h3><p class="meta">The Linux Foundation · currently preparing for the Certified Kubernetes Administrator (CKA) certification</p>
+</main>
+<footer class="site-footer">
+  <div class="wrap">© 2026 Rodrigo Monteiro · <a href="https://github.com/TsukiGva2">github.com/TsukiGva2</a> · <a href="mailto:rodrigo.monteiro.tech@gmail.com">rodrigo.monteiro.tech@gmail.com</a></div>
+</footer>
+</body>
+</html>
