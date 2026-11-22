@@ -24,44 +24,66 @@
 <section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
 <p>The Arduino ran <a href="https://github.com/chochain/nanoFORTH">nanoFORTH</a> (© 2021 chochain, MIT) and the PC talked to it over serial. In the second version, <code>Dis</code> is compiled with holes in it: 16 bytes of <code>NOP</code> for data and two code buffers of call slots. A timer runs <code>Dis</code> over and over. The screen words <code>S-1</code> … <code>S-7</code> never draw anything; they patch <code>Dis</code>.</p><ul class="decisions"><li><strong>Data is stored as code.</strong> nanoFORTH has no data segment inside a word, so values are written as instructions that push them: <code>BF</code> (LIT) and a 16-bit value, plus a magnitude byte for counts like 10K.</li><li><strong>Calls are patched in.</strong> <code>program-calls!</code> writes <code>C000 | address</code> into the slots, pointing at the drawing word each screen needs.</li><li><strong>The fixed parts stay fixed.</strong> The device name, the connectivity footer and the final draw are compiled once and never touched.</li></ul>
 </section>
-<section aria-labelledby="code"><h2 id="code">Code</h2>
-<p>The word itself, with the memory layout I kept in its comments:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L74-L124">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>: Dis			( -- ; Screen buffer )
- 
-	\ Memory layout:
+<section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
+<p>The PC sends one Forth phrase per update; everything else happens inside the Arduino's 1 KB dictionary. The Forth snippets are from AA2-main; the Go side is from AA2-final, the first version that called the screen words directly.</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/aa2-forth.svg" loading="lazy" alt="Architecture of the Forth screen: Go on the PC sends Forth phrases over serial to the nanoFORTH VM on the Arduino; screen words patch the Dis word, a timer runs Dis, and Dis calls the C API that writes to the LCD."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/aa2-forth.puml</code>).</figcaption></figure><div class="part"><h3>The Go host</h3><p>Each update is one line, wrapped in <code>0 TME</code> / <code>1 TME</code> so the timer never draws a half-patched <code>Dis</code>.</p><figure class="code"><figcaption><a href="https://github.com/MyTempoESP/AA2/blob/fuck/lcdlogger/screens.go#L23-L40">lcdlogger/screens.go (AA2-final)</a></figcaption><pre><code>func (display *SerialDisplay) DrawScreen(code string) {
 
-	\               080: 3820       :
+	display.Forth.Send(&quot;0 TME&quot;)
+	display.Forth.Send(code)
+	display.Forth.Send(&quot;1 TME&quot;)
+}
 
-	\         REL   ADDR
-        \       DATA+00 082: bbbbbbbb   DATA Row 1
-        \       DATA+04 086: bbbbbbbb   DATA Row 2
-        \       DATA+08 08A: bbbbbbbb   DATA Row 3
-        \       DATA+0C 08E: bbbbbbbb   DATA Row 4
+func (display *SerialDisplay) ScreenTags(tags, tagsUnicas ForthNumber) {
 
-        \               092:   00       First label ( Portal myXXX )
-        \               093: c005
-        \               095: c079
-        \               097: c01d
-        \               099: c00d
-        \       
-        \       COD1+00 09B: bcbb       Code-1 - Call slot 1
-        \       COD1+02 09D: bbbb       Code-1 - Call slot 2
-        \       COD1+04 09F: c00d       Code-1 - Forward (END)
-        \       
-        \       COD2+00 0A1: bcbb       Code-2 - Call slot 1
-        \       COD2+02 0A3: bbbb       Code-2 - Call slot 2
-        \       COD2+04 0A5: c00d       Code-2 - Forward (END)
-        \
-        \               0A7:   03       Last label ( Comunicando WEB )
-        \               0A8: c005
-        \               0AA: bb00
-        \               0AC: c025
-        \               0AE: c00d
-        
-	\		0B0: 00b4       Draw()
-        \       	0B2:   80       ;
-         
+	display.DrawScreen(
+		fmt.Sprintf(
+			&quot;%d %d %d %d S-1&quot;,
 
-	#_4 #_4 #_4 #_4		( COMPILE TIME: data-end-addr ; 16 byte data buffer ) 
+			tags.Value, tags.Magnitude,
+			tagsUnicas.Value, tagsUnicas.Magnitude,
+		),
+	)
+}</code></pre></figure></div><div class="part"><h3>Screen words</h3><p><code>S-1</code> writes its arguments into DATA as push instructions, then patches the two calls it needs into each code buffer.</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L306-L339">forth/aa2.fs</a></figcaption><pre><code>	\ Data for 1-CODE
+	\ we reserve the two LAST rows for that data.
+
+	( LABEL: REGIST. )
+	( value ) $02
+	( index ) $0C
+	data-C!
+
+	( LITERAL: Tags[bfvvv1m1] )
+	( value ) ( m2 vvv2 m1 vvv1 )
+	( index )      $02
+	( align )     ( 4 )
+	data-Big!
+
+	\ Data for 2-CODE
+	\ we reserve the two FIRST rows for that data
+
+	( LABEL: ATLETAS )
+	( value ) $01
+	( index ) $04
+	data-C!
+
+	( LITERAL: Atletas[bfvvv2m2] )
+	( value ) ( m2 vvv2 )
+	( index )      $00
+	( align )     ( 4 )
+	data-Big!
+
+	addr-Label
+	addr-BigNum 1-CODE program-calls!
+
+	addr-Label
+	addr-BigNum 2-CODE program-calls!
+;</code></pre></figure></div><div class="part"><h3>Patching a call</h3><p>A call in nanoFORTH is <code>C000 | address</code>, two bytes. <code>program-calls!</code> writes two of them into a code buffer.</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L178-L182">forth/aa2.fs</a></figcaption><pre><code>: prepare-call		( word-addr target-addr -- ; this function is specific to the [encode-]call! functions )
+	&gt;R			( word-addr        target-addr ; puts target-addr in a pokeball )
+	$C000 OR		( word-addr        call-opcode ; creates a call instruction, C000 | Address )
+	R&gt;			( call-instruction             ; goes like &quot;target-addr, i choose you!&quot; )
+;</code></pre></figure><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L217-L221">forth/aa2.fs</a></figcaption><pre><code>: program-calls!	( addr-W1 addr-W2 n-CODE -- ; programs the passed words into the specified CODE section )
+	DUP &gt;R &gt;R		( addr-W1 addr-W2 n-CODE -- addr-W1 addr-W2 ; puts n-CODE in the return stack for 2 uses )
+	1      R&gt; call-idx!	( addr-W1 addr-W2 ; programs W2 to n-CODE index 1 )
+	0   R&gt;    call-idx!	( addr-W1         ; programs W1 to n-CODE index 0 )
+;</code></pre></figure></div><div class="part"><h3>Dis</h3><p>The word that gets rewritten: 16 NOPs for data, the fixed header, two tagged buffers, the footer and the draw call. Below it, a dump read back from the device after <code>3 10 3 10 S-1</code>.</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L110-L124">forth/aa2.fs</a></figcaption><pre><code>	#_4 #_4 #_4 #_4		( COMPILE TIME: data-end-addr ; 16 byte data buffer ) 
 
 	0       Label		( label-id ; Main label, shows device name )
 	VERSION Number		( device-version )
@@ -75,54 +97,34 @@
 	        Forward
 
 	0 API			( 0 ; C-Api call #0: Draw screen )
-;</code></pre></figure><p>Writing a call instruction into a slot:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L178-L221">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>: prepare-call		( word-addr target-addr -- ; this function is specific to the [encode-]call! functions )
-	&gt;R			( word-addr        target-addr ; puts target-addr in a pokeball )
-	$C000 OR		( word-addr        call-opcode ; creates a call instruction, C000 | Address )
-	R&gt;			( call-instruction             ; goes like &quot;target-addr, i choose you!&quot; )
-;
-
-: encode-call!  	( word-addr target-addr -- ; useful in code modifying words, encode a literal call instruction )
-	prepare-call		( word-addr        target-addr ; )
-	16-bit-encode!		( call-instruction target-addr ; encodes the created call instruction as a value to target-addr )
-;
-
-: call! 		( word-addr target-addr -- ; writes a call instruction in target-addr )
-	prepare-call		( word-addr        target-addr ; )
-	!			( call-instruction target-addr ; writes the created call instruction, modifying target-addr )
-;
-
-: call-idx!		( word-addr idx code-addr -- ; writes a call instruction to aligned offset )
-	&gt;R			( word-addr idx align code-addr ; storing code-addr )
-	2 R&gt;			( word-addr idx align           ; retrieving code-addr, to reorder )
-	calc-align		( word-addr idx align code-addr ; 2-byte call )
-	call!			( word-addr indexed-addr )
-;
-
-\ ======================
-
-\ Screen function addresses
-
-&#x27; Label          VALUE addr-Label
-&#x27; Forward        VALUE addr-Forward
-&#x27; BigNum         VALUE addr-BigNum
-&#x27; Number         VALUE addr-Number
-&#x27; Value          VALUE addr-Value
-&#x27; Ip             VALUE addr-Ip
-&#x27; Ms             VALUE addr-Ms
-&#x27; helper-Antenna VALUE addr-Antenna  
-
-\ Screen functions
-
-( ADDR IDX N-CODE call-idx! )
-: program-calls!	( addr-W1 addr-W2 n-CODE -- ; programs the passed words into the specified CODE section )
-	DUP &gt;R &gt;R		( addr-W1 addr-W2 n-CODE -- addr-W1 addr-W2 ; puts n-CODE in the return stack for 2 uses )
-	1      R&gt; call-idx!	( addr-W1 addr-W2 ; programs W2 to n-CODE index 1 )
-	0   R&gt;    call-idx!	( addr-W1         ; programs W1 to n-CODE index 0 )
-;</code></pre></figure><p>A memory dump read back from the device after <code>3 10 3 10 S-1</code>. Row <code>080</code> holds the patched data, rows <code>090</code>–<code>0A0</code> the calls:</p><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L300-L304">archives/AA2-main/forth/aa2.fs</a></figcaption><pre><code>	\ DMP should look something like this ( let m2 = 3, m2 = 10, m1 = 3, and m1 = 10 )
+;</code></pre></figure><figure class="code tab8"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/forth/aa2.fs#L300-L304">forth/aa2.fs</a></figcaption><pre><code>	\ DMP should look something like this ( let m2 = 3, m2 = 10, m1 = 3, and m1 = 10 )
 	\	15:40:40.516 -&gt; 080: 3820bf00 0a0301bb bbbbbf00 0a0302bb  8 ?____;;;?____;
 	\ 	15:40:40.516 -&gt; 090: bbbb00c0 05c079c0 1dc00dc0 05c015c0  ;;_@_@y@_@_@_@_@
 	\ 	15:40:40.516 -&gt; 0a0: 0dc005c0 15c00d03 c005bb00 c025c00d  _@_@_@__@_;_@%@_
-	\	15:40:40.516 -&gt; 0b0: 00b480</code></pre></figure>
+	\	15:40:40.516 -&gt; 0b0: 00b480</code></pre></figure></div><div class="part"><h3>The patched VM</h3><p>nanoFORTH got two extra words. <code>TAG</code> pushes its own address while compiling, which is how <code>aa2.fs</code> finds the slots to patch.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/Arduino/aa2/n4_asm.cpp#L368-L372">Arduino/aa2/n4_asm.cpp</a></figcaption><pre><code>        case TKN_EXTRA:                     ///&gt;&gt; we only have 2 extra words!
+            tmp += I_EXTRA;
+            ENC8(here, PRM_OPS | (U8)tmp);
+            if (tmp==I_TAG) *(--vm.sp) = (S16)(p0-dic); // PUSH
+            break;</code></pre></figure></div><div class="part"><h3>The C API</h3><p>The sketch only ships a few drawing primitives. <code>BigNum</code> pops a magnitude and a value and prints things like <code>10K</code>.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/MonoTempo/blob/main/archives/AA2-main/Arduino/aa2/aa2.ino#L117-L136">Arduino/aa2/aa2.ino</a></figcaption><pre><code>void
+print_forthNumber()
+{
+  int mag, v;
+  char postfix;
+
+  mag = n4_pop();
+  v = n4_pop();
+
+  postfix = (mag == 0) ?
+      &#x27; &#x27; :
+      (mag &gt;= 3 &amp;&amp; mag &lt; 6 ? &#x27;K&#x27; : &#x27;M&#x27;);
+
+  // &#x27;X&#x27;  if Magnitude = 0, &#x27;XK&#x27; if 6 &gt; Magnitude &gt;= 3
+  // &#x27;XM&#x27; if Magnitude &gt;= 6
+
+  g_x += virt_scr_sprintf(&quot;%d%c&quot;, v, postfix);
+}
+
+void</code></pre></figure></div>
 </section>
 <section aria-labelledby="history"><h2 id="history">History</h2>
 <ol class="timeline"><li><span class="when">Jan 2025</span><span><strong>AA2-retro.</strong> The PC drives a nanoFORTH REPL: every frame is a short Forth phrase that builds the screen, and every button poll is a round trip through the interpreter.</span></li><li><span class="when">Feb 2025</span><span><strong>AA2-main.</strong> The screen logic moves onto the device as the self-modifying <code>Dis</code>. A Vim script shortens names to fit nanoFORTH's 3-character limit, and the VM gets two new words, <code>NOP</code> and <code>TAG</code>.</span></li><li><span class="when">24 Feb 2025</span><span><strong>AA2-final.</strong> Go sends one line per update, like <code>3 10 3 10 S-1</code>; the Arduino handles button navigation itself, and modal screens freeze <code>Dis</code> by patching <code>EXIT</code> over its first byte.</span></li><li><span class="when">Mar–Apr 2025</span><span>The Arduino is rewritten in plain C++, and the link becomes checksummed data frames. That is the version in production until Feb 2026.</span></li></ol>

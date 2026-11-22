@@ -24,23 +24,110 @@
 <section aria-labelledby="what-it-is"><h2 id="what-it-is">What it is</h2>
 <p>LLVM IR is meant to be written by compilers, not people. These are my notes from writing it by hand: <code>hello.ll</code> calls printf, <code>loop.ll</code> is a for loop as basic blocks, and <code>game.ll</code> opens an 800×600 window and bounces a green square. Clang compiles the <code>.ll</code> file directly and links raylib statically.</p><div class="figs"><figure><img src="../assets/img/projects/raylib-window.webp" width="804" height="626" alt="Window titled Hello, from LLVM with a green square near the right edge on a dark background."><figcaption>The running game.</figcaption></figure><figure><img src="../assets/img/projects/raylib-game-ll.webp" width="521" height="317" loading="lazy" alt="Editor showing game.ll: the main function allocating x, y, dx and dy and branching to the game loop."><figcaption>game.ll in the editor, with vim-llvm highlighting.</figcaption></figure></div>
 </section>
-<section aria-labelledby="code"><h2 id="code">Code</h2>
-<p>A for loop, as basic blocks:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/loop.ll#L18-L26">loop.ll</a></figcaption><pre><code>  %4 = load i32, i32* %2
+<section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
+<p>One <code>.ll</code> file, three functions and a static raylib:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/raylib-llvm-ir.svg" loading="lazy" alt="Build and call graph: clang compiles game.ll and links raylib; main runs the game loop, calls UpdatePos every frame, which calls DoBoundPos for x and y, and calls raylib to draw."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/raylib-llvm-ir.puml</code>).</figcaption></figure><div class="part"><h3>@main: the game loop</h3><p>Labelled blocks instead of a <code>while</code>: draw a frame, move the square, jump back.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L117-L155">game.ll</a></figcaption><pre><code>shouldClose:
+  %close = call i1 @WindowShouldClose()
 
-  ; %5 &lt;= int_cmp: %4 &lt; 10
-  ; slt = SIGNED less than
-  %5 = icmp slt i32 %4, 10
+  br i1 %close, label %closeWindow, label %draw
 
-  ; %5 has type i1 &lt;- int 1 bit
-  ; branch to 6 if %5 else 11
-  br i1 %5, label %6, label %11</code></pre></figure><p>Bouncing off a wall: flip the velocity by subtracting it from zero.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L40-L47">game.ll</a></figcaption><pre><code>update_dp:
+draw:
+  call void @BeginDrawing()
+
+  call void @ClearBackground(i32 u0xFF181818)
+
+  %posx = load i32, i32* %x
+  %posy = load i32, i32* %y
+
+  ; global constants must be pointers
+  %width = load i32, i32* @width
+  %height = load i32, i32* @height
+  
+  call void
+    @DrawRectangle(
+      i32 %posx,
+      i32 %posy,
+      i32 %width,
+      i32 %height,
+      i32 u0xFF00FF00
+    )
+
+  call void @EndDrawing()
+
+  ; incrementing position
+
+  call void
+    @UpdatePos(
+      i32* %x,
+      i32* %y,
+      i32* %dx,
+      i32* %dy
+  )
+
+  br label %shouldClose</code></pre></figure></div><div class="part"><h3>@UpdatePos</h3><p>Adds the velocity to the position, then checks each axis against its bound.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L55-L86">game.ll</a></figcaption><pre><code>define void @UpdatePos(i32* %x, i32* %y, i32* %dx, i32* %dy) {
+  %posx = load i32, i32* %x
+  %posy = load i32, i32* %y
+
+  %ldx = load i32, i32* %dx
+  %ldy = load i32, i32* %dy
+
+  %posx_off = add nsw i32 %posx, %ldx
+  %posy_off = add nsw i32 %posy, %ldy
+
+  ; loading globals
+  %x_bound = load i32, i32* @x_bound
+  %y_bound = load i32, i32* @y_bound
+
+  call void
+    @DoBoundPos(
+      i32* %x,
+      i32* %dx,
+      i32  %posx_off,
+      i32  %x_bound
+  )
+
+  call void
+    @DoBoundPos(
+      i32* %y,
+      i32* %dy,
+      i32  %posy_off,
+      i32  %y_bound
+  )
+
+  ret void
+}</code></pre></figure></div><div class="part"><h3>@DoBoundPos</h3><p>Out of bounds? Flip the velocity by subtracting it from zero. Otherwise store the new position.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L31-L53">game.ll</a></figcaption><pre><code>; bounds checking
+define void @DoBoundPos(i32* %p, i32* %dp, i32 %pos_off, i32 %size) {
+  %zero = icmp slt i32 %pos_off, 0
+  %over = icmp sgt i32 %pos_off, %size
+
+  %ok = or i1 %zero, %over
+
+  br i1 %ok, label %update_dp, label %update_p
+
+update_dp:
   %ldp = load i32, i32* %dp
 
   ; clever
   %neg_dp = sub nuw i32 0, %ldp
   store i32 %neg_dp, i32* %dp
 
-  ret void</code></pre></figure>
+  ret void
+
+update_p:
+  store i32 %pos_off, i32* %p
+
+  ret void
+}</code></pre></figure></div><div class="part"><h3>raylib</h3><p>The C functions, declared by hand. Colours go in as one packed <code>i32</code>, the way clang passes raylib's Color struct.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/game.ll#L162-L172">game.ll</a></figcaption><pre><code>declare void @InitWindow(i32, i32, i8*)
+declare void @CloseWindow()
+
+declare void @ClearBackground(i32)
+
+declare void @BeginDrawing()
+declare void @EndDrawing()
+
+declare void @DrawRectangle(i32, i32, i32, i32, i32)
+
+declare i1   @WindowShouldClose()</code></pre></figure><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/raylib-llvm-ir/blob/main/Makefile">Makefile</a></figcaption><pre><code>game: game.ll
+	clang -o game game.ll -L./raylib-5.0_linux_amd64/lib -l:libraylib.a -lm</code></pre></figure></div>
 </section>
 <section aria-labelledby="history"><h2 id="history">History</h2>
 <ol class="timeline"><li><span class="when">7 Aug 2024</span><span>Repository created.</span></li><li><span class="when">8 Aug 2024</span><span>The notes, the three .ll files and screenshots.</span></li></ol><p>Thanks to Tsoding for the stream, to <a href="https://github.com/raysan5/raylib">raylib</a> for the API, and to <a href="https://github.com/rhysd/vim-llvm">vim-llvm</a> for the highlighting.</p>

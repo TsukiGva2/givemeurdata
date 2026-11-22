@@ -1,0 +1,23 @@
+@startuml
+!include theme.iuml
+rectangle "PC" {
+  [lcdlogger\nGo] as GO
+}
+node "Arduino Mega" {
+  [nanoFORTH VM\n+ NOP, TAG] as VM
+  package "aa2.fs dictionary" {
+    [S-1 … S-7\nscreen words] as SN
+    [program-calls!\ndata-Big!, data-C!] as PW
+    rectangle "Dis\nDATA · CODE-1 · CODE-2" as DIS
+  }
+  [C API\naa2.ino: Label, BigNum, Ip …] as API
+}
+rectangle "20×4 LCD" as LCD
+GO -right-> VM : serial\n"3 10 3 10 S-1"
+VM -down-> SN : runs
+SN -right-> PW
+PW -down-> DIS : patches bytes
+VM -right-> DIS : timer redraw
+DIS -left-> API : n API
+API -down-> LCD : I2C
+@enduml

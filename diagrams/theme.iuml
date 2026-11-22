@@ -1,0 +1,45 @@
+' Site palette: white #F9F9F9, ink #181818, peach #FAE5C7.
+skinparam backgroundColor #F9F9F9
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam defaultFontName sans-serif
+skinparam defaultFontSize 14
+skinparam defaultFontColor #181818
+skinparam ArrowColor #181818
+skinparam ArrowThickness 1.2
+skinparam componentStyle rectangle
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #181818
+  BorderThickness 1.5
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #181818
+  BorderThickness 1.5
+}
+skinparam database {
+  BackgroundColor #FAE5C7
+  BorderColor #181818
+}
+skinparam queue {
+  BackgroundColor #FAE5C7
+  BorderColor #181818
+}
+skinparam file {
+  BackgroundColor #FAE5C7
+  BorderColor #181818
+}
+skinparam package {
+  BackgroundColor #F9F9F9
+  BorderColor #181818
+  FontStyle bold
+}
+skinparam node {
+  BackgroundColor #F9F9F9
+  BorderColor #181818
+}
+skinparam actor {
+  BackgroundColor #FAE5C7
+  BorderColor #181818
+}

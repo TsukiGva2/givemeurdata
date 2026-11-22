@@ -1,0 +1,17 @@
+@startuml
+!include theme.iuml
+left to right direction
+file "game.ll" as LL
+[clang] as CL
+package "game (binary)" {
+  [@main\ngame loop] as MAIN
+  [@UpdatePos] as UP
+  [@DoBoundPos] as DB
+}
+[libraylib.a\nraylib 5.0] as RAY
+LL --> CL
+CL --> MAIN : compile + link
+MAIN --> UP : every frame
+UP --> DB : x, then y
+MAIN --> RAY : InitWindow, DrawRectangle …
+@enduml

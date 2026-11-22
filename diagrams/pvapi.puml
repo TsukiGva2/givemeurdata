@@ -1,0 +1,20 @@
+@startuml
+!include theme.iuml
+actor "Storefront /\npartner client" as U
+package "Gin" {
+  [routes.go\nroute groups] as RT
+  [middleware\nJWT · API token] as MW
+  [Bouncer + gates\none gate per entity] as G
+}
+[controllers\nbind · map errors] as C
+[models\nown the pgx.Tx] as M
+[query\nplain SQL strings] as Q
+database "PostgreSQL" as PG
+U -down-> RT : HTTPS
+RT -right-> MW
+MW -right-> G
+G -down-> C
+C -left-> M
+M -left-> Q
+Q -left-> PG : pgx pool
+@enduml

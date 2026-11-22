@@ -1,0 +1,18 @@
+@startuml
+!include theme.iuml
+left to right direction
+file "DIMACS .cnf" as F
+[lex//1\nDCG lexer] as L
+[parse//1\nclauses] as P
+[dpll/4] as D
+[unit/3 · pure_literal/3] as UP
+[assign/4\nassign_true · assign_false] as A
+rectangle "SAT: model\nor UNSAT" as OUT
+F --> L : phrase_from_file
+L --> P : tokens
+P --> D : CNF
+D --> UP : pick a literal
+D --> A : simplify
+A --> D : recurse
+D --> OUT
+@enduml

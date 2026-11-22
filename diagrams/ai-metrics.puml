@@ -1,0 +1,20 @@
+@startuml
+!include theme.iuml
+actor "pi agent" as PI
+[/feedback skill\nSKILL.md] as SK
+[session-info.ts\nget_session_id · usage_metrics] as EXT
+file ".pi/MAP.csv" as CSV
+package "Node-RED" {
+  [watch → read →\ncsv → split] as IN
+  [Calculate %s\nfunction] as PCT
+  [JSONata\njoin / reduce] as AGG
+  [Dashboard 2\ntable · gauge · chart] as UI
+}
+PI -right-> SK : /feedback
+SK -right-> EXT : metrics
+SK -down-> CSV : append rows
+CSV -right-> IN : file change
+IN -right-> PCT
+PCT -down-> AGG
+AGG -left-> UI
+@enduml

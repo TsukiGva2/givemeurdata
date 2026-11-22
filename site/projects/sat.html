@@ -27,8 +27,34 @@
 <section aria-labelledby="how-the-solver-works"><h2 id="how-the-solver-works">How the solver works</h2>
 <ul class="decisions"><li><strong>Unit clauses first.</strong> If a clause has a single literal, that variable is forced. The cut commits to it.</li><li><strong>Then pure literals.</strong> A variable that only appears with one sign gets that value.</li><li><strong>Then a decision.</strong> The first unassigned variable, true first; Prolog backtracks into false if that branch hits an empty clause.</li><li><strong>Simplify as you go.</strong> Assigning a value drops the clauses it satisfies and removes the literals it makes false.</li></ul>
 </section>
-<section aria-labelledby="code"><h2 id="code">Code</h2>
-<figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L24-L50">sat_dimacs.pl</a></figcaption><pre><code>% SAT
+<section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
+<p>Everything is in <code>sat_dimacs.pl</code>, about 150 lines:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/sat.svg" loading="lazy" alt="Pipeline of the solver: a DIMACS file goes through a DCG lexer and parser into a list of clauses; dpll/4 picks literals with unit/3 and pure_literal/3, simplifies with assign/4 and recurses until it finds a model or fails."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/sat.puml</code>).</figcaption></figure><div class="part"><h3>Lexer</h3><p>A DCG over the file's characters. Comment lines are skipped, and the header must have two spaces before the clause count, as in the SATLIB files.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L139-L151">sat_dimacs.pl</a></figcaption><pre><code>tok(end_clause) --&gt; &quot;0&quot;.
+
+tok(var(not(X))) --&gt;
+    &quot;-&quot;, integer(X).
+
+tok(var(X)) --&gt;
+    integer(X).
+
+tok(header(Vars, Clauses)) --&gt;
+    &quot;p&quot;,           &quot; &quot;,
+    &quot;cnf&quot;,         &quot; &quot;,
+    integer(Vars), &quot;  &quot;,
+    integer(Clauses).</code></pre></figure></div><div class="part"><h3>Parser</h3><p>Turns the token stream into a list of clauses; <code>0</code> ends a clause.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L95-L109">sat_dimacs.pl</a></figcaption><pre><code>parse([Clause|Clauses]) --&gt;
+    disjunction([], ClauseRev), !,
+    { reverse(ClauseRev, Clause)
+    },
+    parse(Clauses).
+
+parse([]) --&gt;
+    [].
+
+disjunction(C, C) --&gt;
+    [end_clause], !.
+
+disjunction(Acc, Clause) --&gt;
+    [var(V)],
+    disjunction([V|Acc], Clause).</code></pre></figure></div><div class="part"><h3>dpll/4</h3><p>The solver. Each clause is one rule, tried in order: done, conflict, unit clause, pure literal, decision.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L24-L50">sat_dimacs.pl</a></figcaption><pre><code>% SAT
 % -SAT is the set of attributions to the vars
 dpll([], SAT, SAT, _) :- !.
 
@@ -54,7 +80,26 @@ dpll(Phi, Test, SAT, Symbols) :-
 dpll(Phi, Test, SAT, [Sym|Symbols]) :-
     !,
     assign(Phi, Sym, T, Assigned),
-    dpll(Assigned, [T|Test], SAT, Symbols).</code></pre></figure>
+    dpll(Assigned, [T|Test], SAT, Symbols).</code></pre></figure></div><div class="part"><h3>Choosing a literal</h3><p>A unit clause forces its variable; a pure literal appears with only one sign.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L52-L62">sat_dimacs.pl</a></figcaption><pre><code>pure_literal(Phi, Sym, t(Sym)) :-
+    \+ (	member(C, Phi)
+       ,	member(not(Sym), C)
+       ).
+pure_literal(Phi, Sym, f(Sym)) :-
+    \+ (	member(C, Phi)
+       ,	member(Sym, C)
+       ).
+
+unit(Phi, Sym, t(Sym)) :- member([Sym], Phi).
+unit(Phi, Sym, f(Sym)) :- member([not(Sym)], Phi).</code></pre></figure></div><div class="part"><h3>Simplifying</h3><p>Setting a variable true drops the clauses that contain it and removes its negation from the rest. An emptied clause is the conflict <code>dpll/4</code> looks for.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/SAT/blob/main/sat_dimacs.pl#L81-L90">sat_dimacs.pl</a></figcaption><pre><code>% True assignment -------------------------------------------
+assign_true([Clause|Clauses], Sym, NewClauses, Assigned) :-
+    member(Sym, Clause), !,
+    assign_true(Clauses, Sym, NewClauses, Assigned).
+
+assign_true([Clause|Clauses], Sym, NewClauses, Assigned) :-
+    include({Sym}/[P]&gt;&gt;(P\=not(Sym)), Clause, NoSym),
+    assign_true(Clauses, Sym, [NoSym|NewClauses], Assigned).
+
+assign_true([], _, NewClauses, NewClauses).</code></pre></figure></div>
 </section>
 <section aria-labelledby="benchmark"><h2 id="benchmark">Benchmark</h2>
 <p>One run over SATLIB's uf20-91 set: 1000 random 3-SAT instances, each with 20 variables and 91 clauses, all satisfiable. The solver found a model for all 1000.</p><div class="table-wrap"><table><tbody><tr><th scope="row">Instances</th><td>1000 (uf20-91)</td></tr><tr><th scope="row">Inferences</th><td>213,752,366</td></tr><tr><th scope="row">CPU time</th><td>21.882 s</td></tr><tr><th scope="row">Wall time</th><td>21.881 s</td></tr><tr><th scope="row">Speed</th><td>9,768,366 LIPS</td></tr></tbody></table></div><p>Inferences are SWI-Prolog's count of predicate calls; LIPS is inferences per second. So the whole set took about 22 seconds on one core. The README notes a single 50-variable instance takes roughly 79 million inferences, so harder sets are out of reach. <a href="https://github.com/TsukiGva2/SAT/blob/main/benchmarks/uf20-91.out">Full output</a>.</p>

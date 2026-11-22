@@ -1,0 +1,35 @@
+@startuml
+!include theme.iuml
+node "Portal unit (Arch Linux PC)" {
+  package "Offline · docker compose" {
+    [MyReader\nPython] as MR
+    queue "RabbitMQ\nantenna_exchange" as MQ
+    [Envio\nGo] as EN
+    [AA2\nGo] as AA
+  }
+  package "Host · systemd" {
+    [chancelor\nsh] as CH
+  }
+  package "Online · docker run" {
+    [Receba\nGo] as RC
+    [Reenvio\nGo] as RE
+  }
+  database "N0.db … Nk.db\nequipamento.db" as DB
+}
+rectangle "RFID reader\nChafon / Impinj" as R
+rectangle "Arduino + 20×4 LCD" as ARD
+cloud "MyTempo API" as API
+R --> MR : TCP / LLRP
+MR --> MQ : publish tag
+MQ --> EN
+MQ --> AA
+EN --> DB : sharded writes
+AA --> ARD : serial frames
+AA --> CH : FIFO\nsig-upload-data
+CH --> RC
+CH --> RE
+RC --> DB : event, athletes
+DB --> RE
+RC --> API
+RE --> API : times
+@enduml

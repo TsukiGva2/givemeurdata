@@ -232,3 +232,13 @@ figure.tab8 pre { tab-size: 8; }
   .hero-mix .side-col > .side:first-child { display: none; } /* repeated by the About section below */
   .hero-mix .side-col > .side:nth-child(2) { border-top: 0; padding-top: 0; }
 }
+
+/* Code overview: architecture diagram, then one snippet per part */
+figure.diagram { margin: 24px 0 8px; }
+.diagram-scroll { overflow-x: auto; border: 2px solid var(--ink); background: var(--bg); padding: 12px; }
+.diagram-scroll img { width: auto; max-width: 100%; height: auto; margin: 0 auto; }
+@media (max-width: 600px) { .diagram-scroll img { max-width: none; } } /* natural size, scroll sideways */
+.part { margin-top: 32px; }
+.part h3 { font-size: 1.2rem; margin-bottom: .3em; }
+.part p { margin: 0 0 10px; }
+.part figure.code { margin: 0 0 12px; }

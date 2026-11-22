@@ -27,8 +27,75 @@
 <section aria-labelledby="design-decisions"><h2 id="design-decisions">Design decisions</h2>
 <ul class="decisions"><li><strong>A CSV file as the database.</strong> The agent only appends rows; Node-RED is a file watcher, a CSV parser and a few JSONata reductions.</li><li><strong>Output the machine can read.</strong> The skill allows only raw rows with 12 fixed columns, effort that sums to exactly 100, and scope as a module name, never a path.</li><li><strong>Numbers from tools, not from the model.</strong> Token counts come from an extension, and the timestamp is read out of the session's UUIDv7.</li></ul>
 </section>
-<section aria-labelledby="code"><h2 id="code">Code</h2>
-<p>The columns the agent has to write:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/agents/skills/feedback/SKILL.md#L70">agents/skills/feedback/SKILL.md</a></figcaption><pre><code>session_id | friction_category | scope | effort_pct | diagnosis | tokens_in | tokens_out | tokens_total | cost_total | model_provider | model_id | timestamp</code></pre></figure><p>The gauge: the average input/output ratio over all rows, as a JSONata reduce.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/flows.json#L392">flows.json</a></figcaption><pre><code>$A + ($number(payload.tokens_in) / $number(payload.tokens_out))</code></pre></figure>
+<section aria-labelledby="code-overview"><h2 id="code-overview">Code overview</h2>
+<p>The agent writes a file; Node-RED reads it. Nothing else talks to anything:</p><figure class="diagram"><div class="diagram-scroll"><img src="../assets/diagrams/ai-metrics.svg" loading="lazy" alt="Data flow: the pi agent runs the feedback skill, which reads metrics from an extension and appends rows to MAP.csv; Node-RED watches the file, parses it, splits tokens by effort, aggregates with JSONata and shows a dashboard."></div><figcaption>Architecture, drawn with PlantUML (source in <code>diagrams/ai-metrics.puml</code>).</figcaption></figure><div class="part"><h3>The /feedback skill</h3><p>The rules that keep the agent's output machine-readable:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/agents/skills/feedback/SKILL.md#L42-L64">agents/skills/feedback/SKILL.md</a></figcaption><pre><code>
+1. **Zero Conversational Text**
+   Do not output any markdown headers, introductory text, greetings, or
+   conclusions. Output *only* raw CSV rows.
+
+2. **Scope column**
+   Replace all file/directory references with a single capitalized module name
+   — the business domain or logical module that best captures the affected
+   area. Never use file paths, globs, or comma-separated lists.
+
+   Optionally append a parenthetical sub-scope for granularity, used sparingly:
+   `Checkout(tests)` when the friction is specifically about test code,
+   `Checkout(db)` when it&#x27;s about schema/migrations, etc.
+
+   - GOOD: `Checkout`, `Checkout(tests)`, `Checkout(db)`
+   - BAD: `checkout/`, `controllers/checkout/checkout.go`, `api_checkout_*_test.go`
+
+3. **Apportioning Logic**
+   Subjectively divide the cognitive effort spent across the session into
+   relative integers representing percentages (e.g., 70, 30). The sum of the
+   `Effort_Percentage` column across all rows generated for a single feedback
+   loop **must equal exactly 100**.</code></pre></figure></div><div class="part"><h3>The extension</h3><p>Token and cost numbers come from a tool, not from the model's memory.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/agents/extensions/session-info.ts#L113-L131">agents/extensions/session-info.ts</a></figcaption><pre><code>  pi.registerTool({
+    name: &quot;usage_metrics&quot;,
+    label: &quot;Usage Metrics&quot;,
+    description:
+      &quot;Returns aggregated token usage, cost, context utilization, and current model — the same metrics shown in the pi UI footer.&quot;,
+    promptSnippet: &quot;Return aggregated usage metrics for the current session&quot;,
+    promptGuidelines: [
+      &quot;Use usage_metrics when the user asks about token usage, cost, context usage, or session statistics.&quot;,
+    ],
+    parameters: Type.Object({}),
+
+    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
+      const metrics = buildMetrics(pi, ctx);
+      return {
+        content: [{ type: &quot;text&quot;, text: JSON.stringify(metrics, null, 2) }],
+        details: metrics,
+      };
+    },
+  });</code></pre></figure></div><div class="part"><h3>MAP.csv</h3><p>Twelve pipe-separated columns, one row per kind of friction:</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/agents/skills/feedback/SKILL.md#L70">agents/skills/feedback/SKILL.md</a></figcaption><pre><code>session_id | friction_category | scope | effort_pct | diagnosis | tokens_in | tokens_out | tokens_total | cost_total | model_provider | model_id | timestamp</code></pre></figure></div><div class="part"><h3>Splitting the cost</h3><p>A function node gives each row its share of the session's tokens and cost.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/flows.json#L303-L304">flows.json · Calculate %s</a></figcaption><pre><code>let data = msg.payload;
+
+let p = data.effort_pct / 100;
+
+function key_pct(k, places) {
+    data[k] = (data[k] * p).toFixed(places);
+}
+
+key_pct(&quot;tokens_in&quot;, 0);
+key_pct(&quot;tokens_out&quot;, 0);
+key_pct(&quot;tokens_total&quot;, 0);
+key_pct(&quot;cost_total&quot;, 5);
+
+msg.payload = data;
+
+return msg;</code></pre></figure></div><div class="part"><h3>Aggregating</h3><p>JSONata reductions: the average input/output ratio for the gauge, and effort per module for the chart.</p><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/flows.json#L392">flows.json · I/O ratio</a></figcaption><pre><code>$A + ($number(payload.tokens_in) / $number(payload.tokens_out))</code></pre></figure><figure class="code"><figcaption><a href="https://github.com/TsukiGva2/AI-Metrics/blob/main/flows.json#L421">flows.json · Agg. Effort</a></figcaption><pre><code>(
+  $scope  := payload.scope;
+  $match  := $lookup($A, $scope);
+  $effort := $number(payload.effort_pct);
+  
+  $merge([
+   $A,
+   { $scope: $exists($match) ?
+  
+  { &quot;t&quot;: $match.t + $effort, &quot;c&quot;: $match.c + 1 } :
+  
+  { &quot;t&quot;: $effort, &quot;c&quot;: 1 }
+   }
+  ]) )</code></pre></figure></div>
 </section>
 <section aria-labelledby="history"><h2 id="history">History</h2>
 <ol class="timeline"><li><span class="when">5 Jun 2026</span><span>Project created.</span></li><li><span class="when">6 Jun 2026</span><span>Bare-bones metrics and the input/output gauge.</span></li><li><span class="when">7 Jun 2026</span><span>Effort per scope chart; the MAP.csv skill and extension.</span></li></ol>
